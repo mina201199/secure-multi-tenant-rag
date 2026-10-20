@@ -2,7 +2,7 @@
 
 提供多家公司共用、依公司與文件權限隔離的繁體中文知識查詢平台。處理作業規定、技令手冊、料件清冊等知識資料，完成盤點、解析、清洗、切塊、向量化、檢索及帶來源引用的回答，並用實驗與安全測試驗證結果。
 
-**交接日期：2026-10-20。M1 基本流程（登入、文件閱讀、越權防護）已可在本機以 Docker 啟動，自動化測試 40 項通過；尚未經組員正式驗收，也還沒有 RLS 與 RAG。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
+**更新日期：2026-10-20。M1 基本流程（登入、文件閱讀、越權防護）已重跑 40 項測試；本分支新增 M2-01 版本模型，完整測試 56 項通過，尚待 PR 驗收。仍沒有 RLS 與 RAG。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
 
 **組員認領入口：[GitHub 任務總索引 #1](https://github.com/mina201199/secure-multi-tenant-rag/issues/1)**。67 項未完成編號任務已各自建立 Issue，依 7 個階段的 [Milestones](https://github.com/mina201199/secure-multi-tenant-rag/milestones) 與 `phase:*` 標籤分類。每項包含前置任務、完成條件與認領方式；請先看索引的起步建議，留言認領並由 Assignees 追蹤負責人。功能驗收後再關閉 Issue，並同步更新本文件勾選狀態。
 
@@ -34,16 +34,16 @@
 | `app/config.py` | `APP_ENV` 改為必填，非 local / test 強制 HTTPS | 部署時補正式環境設定 |
 | `app/db.py` | 改用 psycopg 連線池，一個 request 一個交易 | M2 加 RLS 時只用 `SET LOCAL` |
 | `app/security.py` | 已接上登入、登出、Session、CSRF、Origin / Referer 檢查與限流 | 審查並補充惡意案例 |
-| `app/repository.py` | 清單與詳細頁共用同一段授權條件 | M2 改為版本 ACL；尚無 RLS |
+| `app/repository.py` | 清單與詳細頁共用目前有效版本與版本 ACL 授權條件 | 分享 / 版本寫入 API 與 RLS 尚未實作 |
 | API / HTML 頁面 | `app/main.py` 與 `app/templates/` 已有登入、文件清單與內容 | 補 HTML 錯誤頁與後續功能頁面 |
 | 初始化 / 測試帳號 | `app/bootstrap.py`、`app/migrations/`、兩家公司 seed 已建立 | 見「測試帳號」 |
-| 自動化測試 | `tests/` 40 項通過（API、Session、CSRF、限流、越權、DB 權限） | 新功能同步補正反案例 |
-| 白話教學 | 尚未建立獨立教學檔 | 每階段補操作步驟、設計解釋與練習 |
-| 文件生命週期 / RLS / RAG / 評估 | 尚未實作 | 依下方四個階段完成 |
+| 自動化測試 | `tests/` 56 項通過，含 M1 回歸、版本隔離、M1 升級與全新初始化 | 新功能同步補正反案例 |
+| 白話教學 | 已補 [M1 操作教學](docs/m1-onboarding.md) 與 [M2-01 說明 / 驗收](docs/m2-versions.md) | 後續階段持續補齊 |
+| 文件生命週期 / RLS / RAG / 評估 | 版本 schema 與閱讀查詢已建立；其餘尚未實作 | M2-02 起依序完成 |
 
 **第一個可以驗收的目標：兩家公司的預建帳號各自登入後，只能列出及開啟自己有權閱讀的文件；直接呼叫 API 或猜測 ID 也不能越權。**
 
-建議接手順序：先補資料庫 schema 與 seed → 接上登入、登出與身分驗證 → 補文件清單與內容 API / 頁面 → 完成第一階段測試 → 補教學。第一階段通過後，再進入版本、交接與 RLS，最後才接付費模型。
+目前接手順序：驗收本分支 M2-01 → M2-02 分享 / 撤權 → 新版建立與切換 → 封存、歷史、交接與 RLS。最後才接付費模型。M1 及 M2-01 任務勾選與 Issue 關閉保留到 PR 驗收。
 
 ## 目標與第一版範圍
 
@@ -61,7 +61,7 @@
 
 ## 架構與資料流
 
-以下是**目標架構**。目前只有設定、連線、安全函式與部分文件查詢；圖中的 Web、worker、RLS、檔案處理及模型整合仍待完成。
+以下是**目標架構**。目前已有 Web 登入與文件閱讀、設定、連線、安全函式及有效版本查詢；圖中的 worker、RLS、檔案處理及模型整合仍待完成。
 
 ```mermaid
 flowchart TD
@@ -111,16 +111,16 @@ flowchart TD
 | Web / API | FastAPI + Uvicorn | `app/main.py` 已建立 |
 | HTML | Jinja2，同一個 FastAPI 服務提供頁面 | 登入、文件清單 / 內容頁已建立 |
 | 表單 / 上傳 | python-multipart | 登入 / 登出表單已使用；上傳尚未建立 |
-| 資料庫 | PostgreSQL 16 | M1 schema 已由 `app/migrations/` 建立 |
+| 資料庫 | PostgreSQL 16 | M1 schema 與 M2-01 版本 migration 已建立 |
 | 向量資料庫 | pgvector；`pgvector/pgvector:pg16` | 映像已設定；extension 與向量表未建立 |
-| DB 存取 | psycopg 3 + psycopg_pool + 明確 SQL；目前無 ORM | M1 查詢已完成 |
+| DB 存取 | psycopg 3 + psycopg_pool + 明確 SQL；目前無 ORM | M2-01 有效版本查詢已完成 |
 | 登入與密碼 | 隨機 Session token + HttpOnly Cookie；Argon2 密碼雜湊 | M1 端到端流程已完成並有測試 |
 | 隔離 | API 授權 + PostgreSQL RLS + 關聯約束 | 僅有部分 API 查詢條件，RLS 未實作 |
 | Embedding | 決策採 `text-embedding-3-small` | 尚未整合 SDK / API |
 | 回答 | 決策採 `gpt-5.4-mini` | 尚未整合 SDK / API |
 | 解析 / tokenizer | 必須保留來源位置與 token 計數 | 具體套件尚待選定 |
 | 背景工作 | 持久化工作、可重試、可恢復、可信 tenant 情境 | 機制與 worker 尚待實作 |
-| 測試 | pytest + HTTPX；真實 PostgreSQL 驗證 RLS | M1 測試 40 項通過；RLS 測試待 M2 |
+| 測試 | pytest + HTTPX；真實 PostgreSQL | 56 項通過；RLS 測試待實作 |
 | 本機編排 | Docker Compose；web 綁定 `127.0.0.1:8008` | 建置、初始化、啟動與 test profile 已實際執行 |
 
 版本範圍見 [requirements.txt](requirements.txt) 與 [requirements-dev.txt](requirements-dev.txt)，已通過測試的確切版本見 [requirements.lock](requirements.lock)。沒有既定 React、LangChain、LangGraph、Redis 或 Celery 依賴；如需新增，先說明必要性並更新架構決策。Hybrid、Reranker、第二個 Embedding 模型在對應實驗前選定與記錄。
@@ -159,7 +159,7 @@ flowchart TD
 - 尚無 RLS；隔離目前只靠 API 層 SQL 條件與資料庫複合外鍵。
 - HTML 頁面的 404 / 401 錯誤目前直接顯示 JSON，尚無錯誤頁。
 - migration 是自製的「依檔名套用 SQL」機制，尚未選定正式 migration 工具。
-- 尚無獨立白話教學檔、LICENSE 與 CI。
+- 尚無 LICENSE 與 CI；完整 M2 教學將隨後續功能補齊。
 
 建議後續按責任拆分 `routers/`、`services/`、`templates/`、`workers/`、資料庫遷移、`tests/`、`evals/` 與教學文件；這些都是待新增的模組，不是現有目錄。
 
@@ -277,7 +277,7 @@ seed 只在公司不存在時建立；要重設本機資料，執行 `docker com
 
 ## 資料模型與資料庫設計任務
 
-以下是邏輯模型與實作建議，**尚無完整 DDL / migration**。第一階段現有 SQL 已依賴 `app_core.tenants`、`users`、`sessions`、`login_limits`、`documents`、`document_readers`；組員需先補齊相容 schema，再以 migration 演進到版本模型。
+以下包含已實作與規劃中的模型。`001_m1_core.sql` 建立 M1 schema；`002_m2_versions.sql` 將內容與 ACL 遷移至 `document_versions`、`version_readers`，保留文件 ID 並加入有效版本外鍵。歷史、交接、背景工作等資料表尚未建立；詳見 [M2-01 說明](docs/m2-versions.md)。
 
 | 邏輯資料 | 需要保存的內容與關聯 |
 | --- | --- |
@@ -287,7 +287,7 @@ seed 只在公司不存在時建立；要重設本機資料，執行 `docker com
 | login_limits | 登入計數 key 雜湊、視窗開始時間、嘗試次數 |
 | documents | 公司、標題、業務分類、目前管理責任、目前有效版本、封存狀態 |
 | document_versions | 文件、公司、版本 ID、版本擁有者、來源資訊、原檔指紋、處理狀態、時間 |
-| document_readers / 版本閱讀 ACL | 將閱讀權綁定明確版本範圍；新版不繼承，避免文件層 ACL 自動洩漏新版 |
+| version_readers / 版本閱讀 ACL | 已取代 document_readers，閱讀權綁定明確版本；新版不繼承 |
 | history_permissions | 獨立的歷史調閱授權、授權人與接收人、版本範圍 |
 | chunks / embeddings | 公司、文件與版本、原文位置、頁次 / 段落、文字、token 數、模型與向量 |
 | jobs | 可信 tenant / version、處理步驟、狀態、重試、錯誤、恢復及去重資訊 |
@@ -461,6 +461,8 @@ M3 驗收：PDF / TXT 到帶引用回答的完整流程可重現，失敗 / 重�
 
 2026-10-20 在 Docker Desktop（Windows）上執行 `docker compose --profile test run --build --rm tests`：**40 passed**。範圍為 M1 的登入、Session、CSRF、限流、停用、越權、權限矩陣與 runtime 資料庫權限；不涵蓋 RLS（尚未實作）。
 
+同日接手重跑 M1：**40 passed**。套用本分支 M2-01 後，同一指令結果為 **56 passed, 1 warning**；新增版本隔離、無有效版本拒絕、複合外鍵、舊庫升級與全新安裝測試。警告為既有 Starlette TestClient 使用 HTTPX 的棄用通知。另執行 Compose 啟動、確認 setup `Exited (0)`、web `healthy`、`/health` 為 `ok`，並以 `a.reader` 經 HTTP 登入，確認可讀兩份文件且內容頁顯示第 1 版。這些結果不涵蓋 RLS 或版本寫入 API；完整紀錄見 [M2-01 驗收](docs/m2-versions.md)。
+
 ## 分工與協作方式
 
 以下是可認領的工作範圍，不代表已指定任何組員：
@@ -520,4 +522,4 @@ M3 驗收：PDF / TXT 到帶引用回答的完整流程可重現，失敗 / 重�
 - [ ] 四階段白話教學、練習、架構說明、展示腳本與面試問答。
 - [ ] 授權條款、相依授權檢查與可分享的作品集內容。
 
-本次交接保存的是尚未完成 M1 的開發起點。接手後先讓第一階段可運作並通過測試，再依序完成後續任務。
+本分支已接上 M2-01 版本模型並通過回歸測試；下一項為 M2-02 分享 / 撤權。任務勾選與 Issue 關閉須待 PR 驗收。
