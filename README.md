@@ -4,6 +4,8 @@
 
 **交接日期：2026-10-20。目前是第一階段的程式骨架，尚未完成可執行服務，也沒有通過功能或安全驗收。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
 
+**組員認領入口：[GitHub 任務總索引 #1](https://github.com/mina201199/secure-multi-tenant-rag/issues/1)**。67 項未完成編號任務已各自建立 Issue，依 7 個階段的 [Milestones](https://github.com/mina201199/secure-multi-tenant-rag/milestones) 與 `phase:*` 標籤分類。每項包含前置任務、完成條件與認領方式；請先看索引的起步建議，留言認領並由 Assignees 追蹤負責人。功能驗收後再關閉 Issue，並同步更新本文件勾選狀態。
+
 ## 目錄
 
 - [目前進度與接手順序](#目前進度與接手順序)
