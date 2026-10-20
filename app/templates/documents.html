@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}文件清單｜知識查詢平台{% endblock %}
+{% block content %}
+<h1>可閱讀的文件</h1>
+{% if documents %}
+<ul>
+  {% for document in documents %}
+  <li>
+    <a href="/documents/{{ document.id }}">{{ document.title }}</a>
+    <span class="muted">{{ document.category }}｜{{ "本公司可讀" if document.visibility == "company" else "指定人員" }}</span>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p>目前沒有可閱讀的文件。</p>
+{% endif %}
+{% endblock %}

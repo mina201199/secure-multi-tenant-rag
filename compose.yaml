@@ -1,13 +1,10 @@
 name: secure-rag-lesson1
 
-x-app: &app
-  build: .
-  image: secure-rag-lesson1-app:local
-
+# 密碼與密鑰一律從 .env 讀取（見 .env.example），缺少時 Compose 直接報錯，避免用空字串啟動
 x-runtime: &runtime
-  DATABASE_URL: postgresql://rag_app:local-runtime-only@db:5432/rag_local
+  DATABASE_URL: postgresql://rag_app:${RUNTIME_DB_PASSWORD:?請在 .env 設定 RUNTIME_DB_PASSWORD}@db:5432/rag_local
   APP_BASE_URL: http://127.0.0.1:8008
-  APP_CSRF_SECRET: local-teaching-only-csrf-key-change-before-deployment
+  APP_CSRF_SECRET: ${APP_CSRF_SECRET:?請在 .env 設定 APP_CSRF_SECRET}
   APP_ENV: local
   COOKIE_SECURE: "false"
 
@@ -16,7 +13,7 @@ services:
     image: pgvector/pgvector:pg16
     environment:
       POSTGRES_USER: rag_owner
-      POSTGRES_PASSWORD: local-bootstrap-only
+      POSTGRES_PASSWORD: ${POSTGRES_OWNER_PASSWORD:?請在 .env 設定 POSTGRES_OWNER_PASSWORD}
       POSTGRES_DB: rag_local
     volumes:
       - rag_data:/var/lib/postgresql/data
@@ -27,17 +24,23 @@ services:
       retries: 30
 
   setup:
-    <<: *app
+    build:
+      context: .
+      target: runtime
+    image: secure-rag-lesson1-app:local
     environment:
-      DATABASE_ADMIN_URL: postgresql://rag_owner:local-bootstrap-only@db:5432/rag_local
-      RUNTIME_DB_PASSWORD: local-runtime-only
+      DATABASE_ADMIN_URL: postgresql://rag_owner:${POSTGRES_OWNER_PASSWORD}@db:5432/rag_local
+      RUNTIME_DB_PASSWORD: ${RUNTIME_DB_PASSWORD}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:?請在 .env 設定 SEED_USER_PASSWORD}
     command: ["python", "-m", "app.bootstrap"]
     depends_on:
       db:
         condition: service_healthy
 
   web:
-    <<: *app
+    # 與 setup 共用同一個映像；只在 setup 宣告 build，避免同一映像重複建置
+    image: secure-rag-lesson1-app:local
+    pull_policy: never
     environment: *runtime
     ports:
       - "127.0.0.1:8008:8000"
@@ -55,7 +58,7 @@ services:
     profiles: ["test"]
     environment:
       POSTGRES_USER: rag_owner
-      POSTGRES_PASSWORD: local-test-bootstrap-only
+      POSTGRES_PASSWORD: ${TEST_POSTGRES_OWNER_PASSWORD:?請在 .env 設定 TEST_POSTGRES_OWNER_PASSWORD}
       POSTGRES_DB: rag_test
     tmpfs:
       - /var/lib/postgresql/data
@@ -66,15 +69,18 @@ services:
       retries: 30
 
   tests:
-    <<: *app
+    build:
+      context: .
+      target: test
+    image: secure-rag-lesson1-test:local
     profiles: ["test"]
     environment:
       <<: *runtime
-      DATABASE_URL: postgresql://rag_app:local-test-runtime-only@test-db:5432/rag_test
-      DATABASE_ADMIN_URL: postgresql://rag_owner:local-test-bootstrap-only@test-db:5432/rag_test
-      RUNTIME_DB_PASSWORD: local-test-runtime-only
+      DATABASE_URL: postgresql://rag_app:${TEST_RUNTIME_DB_PASSWORD:?請在 .env 設定 TEST_RUNTIME_DB_PASSWORD}@test-db:5432/rag_test
+      DATABASE_ADMIN_URL: postgresql://rag_owner:${TEST_POSTGRES_OWNER_PASSWORD}@test-db:5432/rag_test
+      RUNTIME_DB_PASSWORD: ${TEST_RUNTIME_DB_PASSWORD}
+      SEED_USER_PASSWORD: ${SEED_USER_PASSWORD}
       APP_ENV: test
-    command: ["pytest", "-q", "--tb=short", "-p", "no:cacheprovider"]
     depends_on:
       test-db:
         condition: service_healthy
