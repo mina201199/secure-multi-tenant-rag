@@ -2,7 +2,7 @@
 
 提供多家公司共用、依公司與文件權限隔離的繁體中文知識查詢平台。處理作業規定、技令手冊、料件清冊等知識資料，完成盤點、解析、清洗、切塊、向量化、檢索及帶來源引用的回答，並用實驗與安全測試驗證結果。
 
-**交接日期：2026-10-20。目前是第一階段的程式骨架，尚未完成可執行服務，也沒有通過功能或安全驗收。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
+**交接日期：2026-10-20。M1 基本流程（登入、文件閱讀、越權防護）已可在本機以 Docker 啟動，自動化測試 40 項通過；尚未經組員正式驗收，也還沒有 RLS 與 RAG。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
 
 **組員認領入口：[GitHub 任務總索引 #1](https://github.com/mina201199/secure-multi-tenant-rag/issues/1)**。67 項未完成編號任務已各自建立 Issue，依 7 個階段的 [Milestones](https://github.com/mina201199/secure-multi-tenant-rag/milestones) 與 `phase:*` 標籤分類。每項包含前置任務、完成條件與認領方式；請先看索引的起步建議，留言認領並由 Assignees 追蹤負責人。功能驗收後再關閉 Issue，並同步更新本文件勾選狀態。
 
@@ -30,14 +30,14 @@
 | 區塊 | 現況 | 接手者應做的事 |
 | --- | --- | --- |
 | 需求與架構決策 | 已完成決策稿 | 先閱讀權限、版本、交接及預算限制 |
-| Docker / Compose | 已有配置，未完成啟動驗證 | 補齊入口、初始化及測試目錄後建置 |
-| `app/config.py` | 已有環境設定與基本檢查 | 與啟動流程整合並測試 |
-| `app/db.py` | 已有 psycopg 連線與 request 交易依賴 | 確認交易與錯誤回滾行為 |
-| `app/security.py` | 已有密碼驗證、Session、CSRF、登入限流等函式 | 接上路由、資料表與頁面，驗證行為 |
-| `app/repository.py` | 已有帶 tenant 與閱讀條件的 SQL 查詢 | 補資料表、API 與越權案例；尚無 RLS |
-| API / HTML 頁面 | 尚未建立 | 補 `app/main.py`、路由與 Jinja2 範本 |
-| 初始化 / 測試帳號 | 尚未建立 | 補 `app/bootstrap.py`、schema 與兩家公司 seed |
-| 自動化測試 | 尚未建立 | 補 `tests/`，建立 API 與資料庫驗收 |
+| Docker / Compose | 已可建置、初始化、啟動並通過 healthcheck；密碼改由 `.env` 提供 | 在自己的電腦照「環境與啟動方式」重跑一次 |
+| `app/config.py` | `APP_ENV` 改為必填，非 local / test 強制 HTTPS | 部署時補正式環境設定 |
+| `app/db.py` | 改用 psycopg 連線池，一個 request 一個交易 | M2 加 RLS 時只用 `SET LOCAL` |
+| `app/security.py` | 已接上登入、登出、Session、CSRF、Origin / Referer 檢查與限流 | 審查並補充惡意案例 |
+| `app/repository.py` | 清單與詳細頁共用同一段授權條件 | M2 改為版本 ACL；尚無 RLS |
+| API / HTML 頁面 | `app/main.py` 與 `app/templates/` 已有登入、文件清單與內容 | 補 HTML 錯誤頁與後續功能頁面 |
+| 初始化 / 測試帳號 | `app/bootstrap.py`、`app/migrations/`、兩家公司 seed 已建立 | 見「測試帳號」 |
+| 自動化測試 | `tests/` 40 項通過（API、Session、CSRF、限流、越權、DB 權限） | 新功能同步補正反案例 |
 | 白話教學 | 尚未建立獨立教學檔 | 每階段補操作步驟、設計解釋與練習 |
 | 文件生命週期 / RLS / RAG / 評估 | 尚未實作 | 依下方四個階段完成 |
 
@@ -108,22 +108,22 @@ flowchart TD
 | 層次 | 決定 / 現有設定 | 實作狀態 |
 | --- | --- | --- |
 | 語言與執行環境 | Python；Docker 基底 `python:3.12-slim` | 已有 Dockerfile |
-| Web / API | FastAPI + Uvicorn | 已列相依；尚無應用入口 |
-| HTML | Jinja2，同一個 FastAPI 服務提供頁面 | 已列相依；範本未建立 |
-| 表單 / 上傳 | python-multipart | 已列相依；路由未建立 |
-| 資料庫 | PostgreSQL 16 | Compose 已選映像；schema 未建立 |
+| Web / API | FastAPI + Uvicorn | `app/main.py` 已建立 |
+| HTML | Jinja2，同一個 FastAPI 服務提供頁面 | 登入、文件清單 / 內容頁已建立 |
+| 表單 / 上傳 | python-multipart | 登入 / 登出表單已使用；上傳尚未建立 |
+| 資料庫 | PostgreSQL 16 | M1 schema 已由 `app/migrations/` 建立 |
 | 向量資料庫 | pgvector；`pgvector/pgvector:pg16` | 映像已設定；extension 與向量表未建立 |
-| DB 存取 | psycopg 3 + 明確 SQL；目前無 ORM | 已有部分連線與查詢 |
-| 登入與密碼 | 隨機 Session token + HttpOnly Cookie；Argon2 密碼雜湊 | 已有函式；端到端流程未完成 |
+| DB 存取 | psycopg 3 + psycopg_pool + 明確 SQL；目前無 ORM | M1 查詢已完成 |
+| 登入與密碼 | 隨機 Session token + HttpOnly Cookie；Argon2 密碼雜湊 | M1 端到端流程已完成並有測試 |
 | 隔離 | API 授權 + PostgreSQL RLS + 關聯約束 | 僅有部分 API 查詢條件，RLS 未實作 |
 | Embedding | 決策採 `text-embedding-3-small` | 尚未整合 SDK / API |
 | 回答 | 決策採 `gpt-5.4-mini` | 尚未整合 SDK / API |
 | 解析 / tokenizer | 必須保留來源位置與 token 計數 | 具體套件尚待選定 |
 | 背景工作 | 持久化工作、可重試、可恢復、可信 tenant 情境 | 機制與 worker 尚待實作 |
-| 測試 | pytest + HTTPX；真實 PostgreSQL 驗證 RLS | 已列相依，測試尚未建立 |
-| 本機編排 | Docker Compose；web 綁定 `127.0.0.1:8008` | 配置已存在，未通過啟動驗收 |
+| 測試 | pytest + HTTPX；真實 PostgreSQL 驗證 RLS | M1 測試 40 項通過；RLS 測試待 M2 |
+| 本機編排 | Docker Compose；web 綁定 `127.0.0.1:8008` | 建置、初始化、啟動與 test profile 已實際執行 |
 
-實際版本範圍以 [requirements.txt](requirements.txt) 為準。目前使用版本範圍，尚無鎖定檔；接手時記錄通過驗收的確切版本。沒有既定 React、LangChain、LangGraph、Redis 或 Celery 依賴；如需新增，先說明必要性並更新架構決策。Hybrid、Reranker、第二個 Embedding 模型在對應實驗前選定與記錄。
+版本範圍見 [requirements.txt](requirements.txt) 與 [requirements-dev.txt](requirements-dev.txt)，已通過測試的確切版本見 [requirements.lock](requirements.lock)。沒有既定 React、LangChain、LangGraph、Redis 或 Celery 依賴；如需新增，先說明必要性並更新架構決策。Hybrid、Reranker、第二個 Embedding 模型在對應實驗前選定與記錄。
 
 ## 目前目錄與已知啟動缺口
 
@@ -134,13 +134,21 @@ flowchart TD
 │   └── secure-multi-tenant-rag-decision-draft.md
 ├── app/
 │   ├── __init__.py
+│   ├── main.py         # FastAPI 入口：/health、登入登出、/api/me、文件 API 與頁面
+│   ├── bootstrap.py    # runtime 角色、套用 migration、兩家公司 seed（可重複執行）
+│   ├── migrations/     # 依檔名順序套用的 SQL，版本記錄在 app_core.schema_migrations
+│   ├── templates/      # Jinja2 頁面
 │   ├── config.py       # 環境設定與基本安全檢查
-│   ├── db.py           # psycopg 連線 / request 交易
+│   ├── db.py           # psycopg 連線池 / request 交易
 │   ├── security.py     # 密碼、Session、CSRF、登入限流函式
 │   └── repository.py   # tenant 與閱讀權限 SQL 條件
+├── tests/              # pytest：API、登入安全、越權與資料庫權限
 ├── compose.yaml
-├── Dockerfile
-├── requirements.txt
+├── Dockerfile          # base / test / runtime 三個 stage，正式映像不含測試工具
+├── requirements.txt    # 執行期相依
+├── requirements-dev.txt
+├── requirements.lock   # 已驗證的確切版本，建置時以 -c 約束
+├── .env.example        # 複製成 .env 後填入本機密碼
 ├── .dockerignore
 ├── .gitattributes
 └── .gitignore
@@ -148,11 +156,10 @@ flowchart TD
 
 已知缺口：
 
-- Dockerfile 的 `COPY tests ./tests` 指向尚不存在的 `tests/`，因此目前不能完成正常建置。
-- Dockerfile 的 `uvicorn app.main:app` 尚無對應的 `app/main.py`。
-- Compose `setup` 的 `python -m app.bootstrap` 尚無對應模組。
-- SQL 參照的 `app_core` schema 與資料表尚無建立腳本。
-- 尚無 HTML 範本、seed 帳號、可操作的登入流程、測試或獨立教學檔。
+- 尚無 RLS；隔離目前只靠 API 層 SQL 條件與資料庫複合外鍵。
+- HTML 頁面的 404 / 401 錯誤目前直接顯示 JSON，尚無錯誤頁。
+- migration 是自製的「依檔名套用 SQL」機制，尚未選定正式 migration 工具。
+- 尚無獨立白話教學檔、LICENSE 與 CI。
 
 建議後續按責任拆分 `routers/`、`services/`、`templates/`、`workers/`、資料庫遷移、`tests/`、`evals/` 與教學文件；這些都是待新增的模組，不是現有目錄。
 
@@ -160,17 +167,21 @@ flowchart TD
 
 前置條件：Git、支援 Linux containers 的 Docker 與 Docker Compose。本專案初期不需 OpenAI 金鑰；先完成登入與隔離驗收再接模型。
 
-### 現在可執行的配置檢查
+### 1. 建立 `.env`
 
 ```powershell
-docker compose config --quiet
+Copy-Item .env.example .env
 ```
 
-這只檢查 Compose 配置，不能證明映像能建置、API 能啟動或權限正確。
+打開 `.env`，把每個 `change-me` 換成隨機值（只用英文字母與數字；`APP_CSRF_SECRET` 至少 32 字元）。可用以下指令產生：
 
-### 補齊第一階段之後的預定操作
+```powershell
+python -c "import secrets; print(secrets.token_hex(24))"
+```
 
-以下是待驗收的目標指令，目前缺少上述模組，**不能把它當成已可運作的快速啟動流程**：
+缺少任何變數時，`docker compose` 會直接顯示「請在 .env 設定 …」並停止。
+
+### 2. 啟動
 
 ```powershell
 docker compose up --build -d
@@ -178,14 +189,35 @@ docker compose ps
 docker compose logs setup web
 ```
 
-預定服務為 `http://127.0.0.1:8008`；`/health`、`/docs` 與登入頁須由第一階段實作。測試帳號及密碼須隨 seed 與教學補上，目前尚無可用帳密。
+`setup` 應顯示 `bootstrap 完成` 並以 `Exited (0)` 結束，`web` 應為 `healthy`。服務位於 `http://127.0.0.1:8008`，`/health` 回傳 `{"status":"ok"}`，API 文件在 `/docs`。
 
-預定自動化驗收指令：
+### 3. 自動化測試
 
 ```powershell
 docker compose --profile test run --build --rm tests
-docker compose down
+docker compose --profile test down
 ```
+
+### 測試帳號
+
+seed 會建立兩家虛構公司，所有帳號的密碼都是 `.env` 中的 `SEED_USER_PASSWORD`。`a.` 開頭為甲公司，`b.` 開頭為乙公司：
+
+| 帳號後綴 | 角色 / 關係 | 可看到的文件 |
+| --- | --- | --- |
+| `owner` | 一般員工，三份文件的擁有者 | 出差補助規定、料件清冊（試行）、主管會議紀錄 |
+| `reader` | 一般員工，獲授權閱讀料件清冊 | 出差補助規定、料件清冊（試行） |
+| `staff` | 一般員工，未獲任何授權 | 出差補助規定 |
+| `manager` | 上述三人的直屬主管 | 出差補助規定（主管不自動取得閱讀權） |
+| `admin` | 公司管理員 | 出差補助規定（管理員不自動取得閱讀權） |
+| `inactive` | 已停用 | 無法登入 |
+
+另有一份已封存的「舊版出差補助規定」，任何人都看不到。兩家公司的「出差補助規定」標題相同、金額不同（NT$1,500 / NT$3,000），用來驗證不會讀到別家內容。
+
+seed 只在公司不存在時建立；要重設本機資料，執行 `docker compose down -v`（**會刪除本機資料庫的所有資料**），再重新 `up`。
+
+### 相依套件版本
+
+`requirements.txt` / `requirements-dev.txt` 記錄允許的版本範圍，`requirements.lock` 記錄已通過測試的確切版本，Docker 建置時以 `-c requirements.lock` 約束。升級套件時，在 `python:3.12-slim` 容器內安裝兩份 requirements 後執行 `pip freeze` 重新產生 lock，並重跑測試。
 
 目前 Compose 分開使用 `db` / `test-db`，測試資料庫為 tmpfs，測試不能連線開發或正式資料庫。`down` 不移除命名資料卷；資料重設方式須在教學另行說明。
 
@@ -193,17 +225,20 @@ docker compose down
 
 | 變數 | 用途 / 現況 |
 | --- | --- |
-| `DATABASE_URL` | web 與測試的 runtime 連線；使用 `rag_app`，不能用資料庫 owner |
-| `DATABASE_ADMIN_URL` | 僅初始化及指定測試使用，不能提供給 web |
-| `RUNTIME_DB_PASSWORD` | 初始化 runtime 角色時使用；初始化程式尚未建立 |
+| `DATABASE_URL` | web 與測試的 runtime 連線；使用 `rag_app`，不能用資料庫 owner（Compose 以 `.env` 組成） |
+| `DATABASE_ADMIN_URL` | 僅初始化及指定測試使用，不能提供給 web（Compose 以 `.env` 組成） |
+| `POSTGRES_OWNER_PASSWORD` | `.env`；開發資料庫 owner 密碼 |
+| `RUNTIME_DB_PASSWORD` | `.env`；bootstrap 建立 / 更新 `rag_app` 角色時設定的密碼 |
+| `SEED_USER_PASSWORD` | `.env`；所有 seed 測試帳號的密碼；未設定時 bootstrap 不建立示範帳號 |
+| `TEST_POSTGRES_OWNER_PASSWORD`、`TEST_RUNTIME_DB_PASSWORD` | `.env`；測試資料庫專用，與開發庫不同 |
 | `APP_BASE_URL` | 本機設定為 `http://127.0.0.1:8008`，供 Origin / CSRF 驗證 |
-| `APP_CSRF_SECRET` | 簽章密鑰；程式要求至少 32 字元 |
-| `APP_ENV` | 現有環境分為 local / test；其他環境要求 HTTPS 及 Secure Cookie |
+| `APP_CSRF_SECRET` | `.env`；簽章密鑰，程式要求至少 32 字元 |
+| `APP_ENV` | **必填**；local / test 允許 HTTP，其他任何值都要求 HTTPS 及 Secure Cookie |
 | `COOKIE_SECURE` | 本機 HTTP 為 false；非本機環境須 true |
 
 現有 Session 設定是閒置 30 分鐘、最長 8 小時；登入 CSRF 有效 10 分鐘，登入限制以帳號與來源位址組合計數，每 10 分鐘超過 10 次回傳 429。這些是已寫入程式的初值，尚待驗證，且目前不是可由環境變數全部覆寫的設定。
 
-Compose 中的 `local-*` 與資料庫密碼均為本機教學占位值。正式環境需替換並另行部署設計。`.env` 目前不會自動覆蓋 Compose 裡的固定字串，若改採環境變數插值，必須同步更新 Compose 與提供不含真實密鑰的範例。未來 OpenAI 金鑰僅由後端或 worker 取得，不提交 Git、不放前端。
+密碼與密鑰不再寫在 `compose.yaml`，一律由 `.env` 插值；`.env` 已列入 `.gitignore`，範例檔 `.env.example` 只含 `change-me` 占位值。正式環境需另行部署設計。未來 OpenAI 金鑰同樣只放 `.env` 或部署平台的密鑰管理，僅由後端或 worker 取得，不提交 Git、不放前端。
 
 ## 必須遵守的權限與業務規則
 
@@ -424,7 +459,7 @@ M3 驗收：PDF / TXT 到帶引用回答的完整流程可重現，失敗 / 重�
 - 每階段保留指令、環境版本、通過 / 失敗摘要、已知限制與必要畫面；失敗不得從報告中移除。
 - 一般日誌不保存密碼、token、文件正文或完整問答；完整虛構題庫與評估結果獨立管理。
 
-目前沒有任何測試通過結果。`requirements.txt` 有 pytest 不等於已完成測試；Compose 有 healthcheck 不等於服務健康。
+2026-10-20 在 Docker Desktop（Windows）上執行 `docker compose --profile test run --build --rm tests`：**40 passed**。範圍為 M1 的登入、Session、CSRF、限流、停用、越權、權限矩陣與 runtime 資料庫權限；不涵蓋 RLS（尚未實作）。
 
 ## 分工與協作方式
 

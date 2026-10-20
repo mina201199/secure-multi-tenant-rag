@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}登入｜知識查詢平台{% endblock %}
+{% block content %}
+<h1>登入</h1>
+{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
+<form method="post" action="/login">
+  {# 同一個值也放在 Cookie，伺服器比對兩者一致才接受，擋住別站偽造的登入表單 #}
+  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
+  <label>帳號 <input name="username" autocomplete="username" maxlength="64" required></label>
+  <label>密碼 <input name="password" type="password" autocomplete="current-password" maxlength="256" required></label>
+  <button type="submit">登入</button>
+</form>
+<p class="muted">測試帳號見 README「測試帳號」段落。</p>
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block title %}{{ document.title }}｜知識查詢平台{% endblock %}
+{% block content %}
+<p><a href="/documents">← 回文件清單</a></p>
+<h1>{{ document.title }}</h1>
+<p class="muted">{{ document.category }}</p>
+{# Jinja2 預設會跳脫 HTML，文件內容即使含有 <script> 也只會顯示成文字 #}
+<div style="white-space: pre-wrap">{{ document.content }}</div>
+{% endblock %}

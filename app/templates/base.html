@@ -1,0 +1,31 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}知識查詢平台{% endblock %}</title>
+  <style>
+    body { font-family: system-ui, "Noto Sans TC", sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
+    header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; border-bottom: 1px solid #ccc; padding-bottom: .5rem; }
+    .error { color: #b00020; }
+    .muted { color: #666; font-size: .9rem; }
+    label { display: block; margin-top: .75rem; }
+    button { margin-top: 1rem; }
+  </style>
+</head>
+<body>
+  {% if me %}
+  <header>
+    <span>{{ me.tenant_name }}｜{{ me.display_name }}（{{ me.username }}）</span>
+    {# 登出會改變狀態，必須用 POST 並附 Session CSRF token，不能做成單純連結 #}
+    <form method="post" action="/logout">
+      <input type="hidden" name="csrf_token" value="{{ me.csrf_token }}">
+      <button type="submit">登出</button>
+    </form>
+  </header>
+  {% endif %}
+  <main>
+    {% block content %}{% endblock %}
+  </main>
+</body>
+</html>
