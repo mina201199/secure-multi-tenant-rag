@@ -2,6 +2,8 @@
 
 提供多家公司共用、依公司與文件權限隔離的繁體中文知識查詢平台。處理作業規定、技令手冊、料件清冊等知識資料，完成盤點、解析、清洗、切塊、向量化、檢索及帶來源引用的回答，並用實驗與安全測試驗證結果。
 
+**HTML 互動展示：[知序 Atlas](http://127.0.0.1:8008/demo)**。啟動 Compose 後即可開啟，不必登入。依本 README 的規劃展示文件庫、上傳處理、閱讀權限、新版、來源問答、交接、歷史、成員與預算；使用虛構記憶體資料，重新整理即還原，不代表後端已實作。真實登入與授權閱讀仍在 `/login`、`/documents`。展示範圍及驗證見 [介面說明](docs/ui-demo.md)。
+
 **更新日期：2026-10-20。M1 基本流程（登入、文件閱讀、越權防護）已重跑 40 項測試；本分支新增 M2-01 版本模型，完整測試 56 項通過，尚待 PR 驗收。仍沒有 RLS 與 RAG。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
 
 **組員認領入口：[GitHub 任務總索引 #1](https://github.com/mina201199/secure-multi-tenant-rag/issues/1)**。67 項未完成編號任務已各自建立 Issue，依 7 個階段的 [Milestones](https://github.com/mina201199/secure-multi-tenant-rag/milestones) 與 `phase:*` 標籤分類。每項包含前置任務、完成條件與認領方式；請先看索引的起步建議，留言認領並由 Assignees 追蹤負責人。功能驗收後再關閉 Issue，並同步更新本文件勾選狀態。
@@ -37,7 +39,7 @@
 | `app/repository.py` | 清單與詳細頁共用目前有效版本與版本 ACL 授權條件 | 分享 / 版本寫入 API 與 RLS 尚未實作 |
 | API / HTML 頁面 | `app/main.py` 與 `app/templates/` 已有登入、文件清單與內容 | 補 HTML 錯誤頁與後續功能頁面 |
 | 初始化 / 測試帳號 | `app/bootstrap.py`、`app/migrations/`、兩家公司 seed 已建立 | 見「測試帳號」 |
-| 自動化測試 | `tests/` 56 項通過，含 M1 回歸、版本隔離、M1 升級與全新初始化 | 新功能同步補正反案例 |
+| 自動化測試 | `tests/` 59 項通過，含 M1 回歸、版本隔離、升級、全新初始化與公開 Demo 邊界 | 新功能同步補正反案例 |
 | 白話教學 | 已補 [M1 操作教學](docs/m1-onboarding.md) 與 [M2-01 說明 / 驗收](docs/m2-versions.md) | 後續階段持續補齊 |
 | 文件生命週期 / RLS / RAG / 評估 | 版本 schema 與閱讀查詢已建立；其餘尚未實作 | M2-02 起依序完成 |
 

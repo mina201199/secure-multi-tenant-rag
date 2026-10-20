@@ -1,31 +1,45 @@
+{% from "icons.html" import icon %}
 <!doctype html>
 <html lang="zh-Hant">
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>{% block title %}知識查詢平台{% endblock %}</title>
-  <style>
-    body { font-family: system-ui, "Noto Sans TC", sans-serif; max-width: 720px; margin: 2rem auto; padding: 0 1rem; line-height: 1.6; }
-    header { display: flex; justify-content: space-between; align-items: center; gap: 1rem; border-bottom: 1px solid #ccc; padding-bottom: .5rem; }
-    .error { color: #b00020; }
-    .muted { color: #666; font-size: .9rem; }
-    label { display: block; margin-top: .75rem; }
-    button { margin-top: 1rem; }
-  </style>
+  <meta name="theme-color" content="#174b3e">
+  <title>{% block title %}知序 Atlas｜團隊知識工作台{% endblock %}</title>
+  <link rel="stylesheet" href="/static/workspace.css?v=2">
+  <script src="/static/workspace.js?v=2" defer></script>
 </head>
-<body>
-  {% if me %}
-  <header>
-    <span>{{ me.tenant_name }}｜{{ me.display_name }}（{{ me.username }}）</span>
-    {# 登出會改變狀態，必須用 POST 並附 Session CSRF token，不能做成單純連結 #}
-    <form method="post" action="/logout">
-      <input type="hidden" name="csrf_token" value="{{ me.csrf_token }}">
-      <button type="submit">登出</button>
-    </form>
-  </header>
-  {% endif %}
-  <main>
-    {% block content %}{% endblock %}
-  </main>
+<body class="{{ 'demo-mode' if demo_mode else 'live-mode' }} {{ 'signed-in' if me else 'signed-out' }}">
+{% include "icons-sprite.html" %}
+{% if me %}
+<div class="app-shell">
+  <aside class="sidebar" id="sidebar">
+    <a class="brand" href="{{ '/demo' if demo_mode else '/documents' }}"><span class="brand-mark">{{ icon('layers') }}</span><strong>知序<span>atlas</span></strong></a>
+    <div class="workspace-switch"><span class="workspace-icon">{{ me.tenant_name[:1] }}</span><div><strong>{{ me.tenant_name }}知識空間</strong><small>TEAM WORKSPACE</small></div>{{ icon('chevrons') }}</div>
+    <div class="nav-label">工作空間</div>
+    <nav aria-label="主要導覽">
+      {% for id, name, glyph in [('documents','文件知識庫','folder'),('ask','知識問答','sparkles'),('processing','文件處理','activity'),('transfers','文件交接','transfer')] %}
+      <a class="nav-item {{ 'active' if id == 'documents' }}" data-nav="{{ id }}" href="/demo#{{ id }}">{{ icon(glyph) }}<span>{{ name }}</span>{% if id == 'documents' %}<span class="nav-dot"></span>{% endif %}</a>
+      {% endfor %}
+      <div class="nav-label second-label">管理與紀錄</div>
+      {% for id, name, glyph in [('history','歷史調閱','history'),('members','成員管理','users'),('usage','用量與預算','chart')] %}
+      <a class="nav-item" data-nav="{{ id }}" href="/demo#{{ id }}">{{ icon(glyph) }}<span>{{ name }}</span></a>
+      {% endfor %}
+    </nav>
+    <div class="sidebar-bottom">
+      <div class="boundary-card"><span class="boundary-icon">{{ icon('shield') }}</span><strong>知識有邊界，協作無距離。</strong><p>每次存取，都從你的權限開始。</p><span class="boundary-status"><i></i>{{ '隔離流程示範中' if demo_mode else '已套用閱讀權限' }}</span></div>
+      <a href="/demo#guide" class="help-link">{{ icon('help') }}<span>使用指南</span>{{ icon('external') }}</a>
+      <div class="profile"><span class="avatar">{{ '安' if demo_mode else me.display_name[-1:] }}</span><div><strong>{{ me.display_name }}</strong><small>{{ '文件擁有者' if demo_mode else me.username }}</small></div>{% if not demo_mode %}<form method="post" action="/logout"><input type="hidden" name="csrf_token" value="{{ me.csrf_token }}"><button class="icon-button" title="登出" aria-label="登出">{{ icon('logout') }}</button></form>{% else %}<a class="icon-button" href="/login" aria-label="前往正式登入" title="前往正式登入">{{ icon('logout') }}</a>{% endif %}</div>
+    </div>
+  </aside>
+  <div class="main-shell">
+    <header class="topbar"><div class="breadcrumb"><button class="icon-button mobile-toggle" aria-label="開啟選單" data-action="menu">{{ icon('menu') }}</button><span>{{ me.tenant_name }}知識空間</span>{{ icon('chevron') }}<strong id="breadcrumb-current">文件知識庫</strong></div><div class="topbar-right">{% if demo_mode %}<span class="demo-label"><i></i> 互動展示 <span>／ 示範資料</span></span>{% else %}<a class="demo-label" href="/demo">{{ icon('external') }} 完整互動展示</a>{% endif %}<span class="top-divider"></span><span class="tenant-lock">{{ icon('lock') }}公司專屬空間</span></div></header>
+    <main id="main-content" class="workspace-main">{% block content %}{% endblock %}</main>
+    <footer class="app-footer"><span>知序 Atlas <span class="footer-dot">·</span> 讓知識流動，讓信任留在每一個環節。</span><span>{{ '介面原型 · 資料僅保留於本次展示' if demo_mode else 'Secure Multi-Tenant Knowledge Workspace' }}</span></footer>
+  </div>
+</div>
+{% else %}{% block public_content %}{% endblock %}{% endif %}
+<div id="toast" class="toast" role="status" aria-live="polite"></div>
+<dialog id="workspace-dialog" class="workspace-dialog" aria-label="操作面板"><div id="dialog-content"></div></dialog>
 </body>
 </html>

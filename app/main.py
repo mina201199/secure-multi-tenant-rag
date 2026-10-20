@@ -5,6 +5,7 @@ from pathlib import Path
 from fastapi import Depends, FastAPI, Form, HTTPException, Request
 from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
+from fastapi.staticfiles import StaticFiles
 
 from app import repository, security
 from app.config import Settings
@@ -29,6 +30,16 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Secure Multi-Tenant RAG", lifespan=lifespan)
+app.mount('/static', StaticFiles(directory=Path(__file__).parent / 'static'), name='static')
+
+
+@app.get('/demo')
+def workspace_demo(request: Request):
+    # 純展示頁不讀取 Session、資料庫或付費模型，僅提供固定的虛構人物。
+    return TEMPLATES.TemplateResponse(request, 'demo.html', {
+        'demo_mode': True,
+        'me': {'tenant_name': '甲公司', 'display_name': '林以安', 'username': 'a.owner', 'role': 'employee'},
+    })
 
 
 def optional_identity(request: Request, connection=Depends(get_db)):

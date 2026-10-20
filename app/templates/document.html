@@ -1,9 +1,7 @@
 {% extends "base.html" %}
-{% block title %}{{ document.title }}｜知識查詢平台{% endblock %}
+{% block title %}{{ document.title }}｜知序 Atlas{% endblock %}
 {% block content %}
-<p><a href="/documents">← 回文件清單</a></p>
-<h1>{{ document.title }}</h1>
-<p class="muted">{{ document.category }}｜第 {{ document.version_number }} 版</p>
-{# Jinja2 預設會跳脫 HTML，文件內容即使含有 <script> 也只會顯示成文字 #}
-<div style="white-space: pre-wrap">{{ document.content }}</div>
+<a class="back-link" href="/documents">{{ icon('arrow','flip') }}返回文件知識庫</a>
+<div class="page-heading"><div><div class="eyebrow">DOCUMENT READER</div><h1>{{ document.title }}</h1><p>{{ document.category }} <span class="footer-dot">·</span> 第 {{ document.version_number }} 版 <span class="footer-dot">·</span> 目前有效版本</p></div><span class="status ready"><i></i>可閱讀</span></div>
+<div class="reader-layout"><article class="paper"><div class="paper-label">{{ icon('file') }}文件內容<span>v{{ document.version_number }}</span></div><h2>{{ document.title }}</h2><div class="document-content">{{ document.content }}</div><div class="paper-end">— 文件內容結束 —</div></article><aside class="reader-info"><h3>關於這份文件</h3><dl><dt>業務分類</dt><dd>{{ document.category }}</dd><dt>有效版本</dt><dd>第 {{ document.version_number }} 版</dd><dt>閱讀範圍</dt><dd>{{ '本公司可讀' if document.visibility == 'company' else '指定人員' }}</dd><dt>所屬空間</dt><dd>{{ me.tenant_name }}知識空間</dd></dl><div class="inline-note">{{ icon('shield') }}你目前有權閱讀此版本。閱讀權限以每次請求時的狀態為準。</div><a class="button secondary full-width" href="/demo#ask">{{ icon('sparkles') }}體驗來源問答</a></aside></div>
 {% endblock %}
