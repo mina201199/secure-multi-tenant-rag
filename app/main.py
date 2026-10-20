@@ -10,6 +10,7 @@ from fastapi.staticfiles import StaticFiles
 from app import repository, security
 from app.config import Settings
 from app.db import create_pool, get_db
+from app.errors import install_error_handlers
 
 TEMPLATES = Jinja2Templates(directory=Path(__file__).parent / "templates")
 DOCUMENT_NOT_FOUND = "找不到文件"
@@ -30,6 +31,7 @@ async def lifespan(app: FastAPI):
 
 
 app = FastAPI(title="Secure Multi-Tenant RAG", lifespan=lifespan)
+install_error_handlers(app, TEMPLATES)
 app.mount('/static', StaticFiles(directory=Path(__file__).parent / 'static'), name='static')
 
 

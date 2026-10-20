@@ -1,0 +1,109 @@
+name: CI
+
+# No base-branch filter: PRs targeting another codex/* branch run too.
+on:
+  push:
+  pull_request:
+  workflow_dispatch:
+    inputs:
+      run_offline:
+        description: Run optional offline parser and readiness-tool tests
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  postgres:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 25
+    env:
+      COMPOSE_PROJECT_NAME: ci-${{ github.run_id }}-${{ github.run_attempt }}
+      COMPOSE_PROFILES: test
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Generate disposable fixture credentials
+        shell: bash
+        run: |
+          umask 077
+          python3 - <<'PY'
+          from pathlib import Path
+          import secrets
+          names = ('POSTGRES_OWNER_PASSWORD', 'RUNTIME_DB_PASSWORD',
+                   'APP_CSRF_SECRET', 'SEED_USER_PASSWORD',
+                   'TEST_POSTGRES_OWNER_PASSWORD', 'TEST_RUNTIME_DB_PASSWORD')
+          values = {name: secrets.token_hex(32) for name in names}
+          for value in values.values():
+              print(f'::add-mask::{value}')
+          Path('.env').write_text(''.join(f'{key}={value}\n' for key, value in values.items()))
+          PY
+          mkdir -p test-results
+          chmod 777 test-results
+      - name: Build isolated runtime and test images
+        run: docker compose build setup tests
+      - name: Bootstrap and check HTTP health
+        shell: bash
+        run: |
+          # --wait requires web healthy and setup completed successfully.
+          docker compose up -d --wait --wait-timeout 180 web
+          curl --fail --silent --output /dev/null http://127.0.0.1:8008/health
+      - name: Run PostgreSQL tests serially
+        shell: bash
+        run: |
+          docker compose run --rm -T \
+            -v "$PWD/tools/ci:/ci:ro" \
+            -v "$PWD/test-results:/results" \
+            tests python /ci/run_tests.py pytest --output /results/postgres.json tests evals/tests
+      - name: Tear down all ephemeral services and volumes
+        if: always()
+        run: docker compose down --volumes --remove-orphans --timeout 15
+      - name: Remove fixture credentials
+        if: always()
+        run: rm -f .env
+      - name: Upload counts only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: postgres-counts-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/postgres.json
+          if-no-files-found: ignore
+          retention-days: 7
+
+  offline:
+    # Additional evidence only; not a substitute for the postgres job.
+    if: github.event_name != 'workflow_dispatch' || inputs.run_offline
+    runs-on: ubuntu-24.04
+    timeout-minutes: 10
+    env:
+      PARSING_QUALITY_CJK_FONT: /usr/share/fonts/truetype/wqy/wqy-microhei.ttc
+    steps:
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+        with:
+          persist-credentials: false
+      - name: Install spike dependencies in a disposable venv
+        run: |
+          sudo apt-get update -qq
+          sudo apt-get install -y --no-install-recommends fonts-wqy-microhei
+          test -r "$PARSING_QUALITY_CJK_FONT"
+          python3 -m venv .ci-venv
+          .ci-venv/bin/python -m pip install -r prototypes/parsing/requirements.txt
+      - name: Run offline tests without services or API credentials
+        run: |
+          .ci-venv/bin/python tools/ci/run_tests.py unittest --output test-results/parser.json prototypes/parsing/tests
+          .ci-venv/bin/python tools/ci/run_tests.py unittest --output test-results/readiness.json tools
+          .ci-venv/bin/python -m unittest tools.ci.test_run_tests
+      - name: Upload counts only
+        if: always()
+        uses: actions/upload-artifact@ea165f8d65b6e75b540449e92b4886f43607fa02 # v4.6.2
+        with:
+          name: offline-counts-${{ github.run_id }}-${{ github.run_attempt }}
+          path: test-results/*.json
+          if-no-files-found: ignore
+          retention-days: 7
