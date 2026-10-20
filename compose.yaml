@@ -1,0 +1,83 @@
+name: secure-rag-lesson1
+
+x-app: &app
+  build: .
+  image: secure-rag-lesson1-app:local
+
+x-runtime: &runtime
+  DATABASE_URL: postgresql://rag_app:local-runtime-only@db:5432/rag_local
+  APP_BASE_URL: http://127.0.0.1:8008
+  APP_CSRF_SECRET: local-teaching-only-csrf-key-change-before-deployment
+  APP_ENV: local
+  COOKIE_SECURE: "false"
+
+services:
+  db:
+    image: pgvector/pgvector:pg16
+    environment:
+      POSTGRES_USER: rag_owner
+      POSTGRES_PASSWORD: local-bootstrap-only
+      POSTGRES_DB: rag_local
+    volumes:
+      - rag_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag_owner -d rag_local"]
+      interval: 3s
+      timeout: 3s
+      retries: 30
+
+  setup:
+    <<: *app
+    environment:
+      DATABASE_ADMIN_URL: postgresql://rag_owner:local-bootstrap-only@db:5432/rag_local
+      RUNTIME_DB_PASSWORD: local-runtime-only
+    command: ["python", "-m", "app.bootstrap"]
+    depends_on:
+      db:
+        condition: service_healthy
+
+  web:
+    <<: *app
+    environment: *runtime
+    ports:
+      - "127.0.0.1:8008:8000"
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+    healthcheck:
+      test: ["CMD", "python", "-c", "import urllib.request; urllib.request.urlopen('http://127.0.0.1:8000/health')"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+
+  test-db:
+    image: pgvector/pgvector:pg16
+    profiles: ["test"]
+    environment:
+      POSTGRES_USER: rag_owner
+      POSTGRES_PASSWORD: local-test-bootstrap-only
+      POSTGRES_DB: rag_test
+    tmpfs:
+      - /var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U rag_owner -d rag_test"]
+      interval: 2s
+      timeout: 3s
+      retries: 30
+
+  tests:
+    <<: *app
+    profiles: ["test"]
+    environment:
+      <<: *runtime
+      DATABASE_URL: postgresql://rag_app:local-test-runtime-only@test-db:5432/rag_test
+      DATABASE_ADMIN_URL: postgresql://rag_owner:local-test-bootstrap-only@test-db:5432/rag_test
+      RUNTIME_DB_PASSWORD: local-test-runtime-only
+      APP_ENV: test
+    command: ["pytest", "-q", "--tb=short", "-p", "no:cacheprovider"]
+    depends_on:
+      test-db:
+        condition: service_healthy
+
+volumes:
+  rag_data:
