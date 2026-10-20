@@ -12,6 +12,26 @@
 
 ## Global Constraints
 
+### 2026-10-20 version-write dependency update
+
+The TXT write slice adds migration `004_m2_version_writes.sql`, protected
+`version_sources` / `version_jobs` tables, and NOLOGIN `rag_version_writer` /
+`rag_version_processor` roles. It does not enable RLS. The historical baseline
+and seven-table policy checklist below predate that slice: subsequent RLS work
+must append migrations after 004 and include **all nine tables** in the audit
+and policy design. `tools/check_rls_readiness.py` now checks these resources.
+
+Before enabling FORCE RLS, define narrowly scoped writer policies for the
+SECURITY DEFINER owner and job/source policies for the internal processing
+capability, while keeping web/processor direct table access revoked. Verify
+create, claim, completion, failure, lease, rollback and concurrent sharing under
+the final policies using real restricted connections. Existing explicit actor
+parameters must also be reconciled with verified LOCAL context; arbitrary
+runtime SQL remains within the trusted backend boundary until that work lands.
+Durable jobs and a restricted TXT processing capability now exist, but no
+running worker, worker login or recovery scheduler exists; R14 is still blocked.
+Do not infer completed RLS or worker isolation from the TXT tests.
+
 - “這是設計交付，沒有啟用 RLS、建立 DB 角色或執行資料庫驗收。” This preparation adds documentation and a catalog audit only. Every implementation checkbox below remains open.
 - “RLS 與 API 授權並存；RLS 不能取代資料關聯約束與業務流程驗證。”
 - “自訂 GUC（app.user_id 等）不是驗證憑證。” The backend and its parameterized SQL remain trusted; arbitrary runtime SQL can forge actor GUCs.

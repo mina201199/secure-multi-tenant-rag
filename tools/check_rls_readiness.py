@@ -9,29 +9,34 @@ import json
 import os
 
 
-ROLE_LOGINS = {"rag_app": True, "rag_auth": True, "rag_policy_reader": False}
+ROLE_LOGINS = {"rag_app": True, "rag_auth": True, "rag_policy_reader": False,
+               "rag_version_writer": False, "rag_version_processor": False}
 TABLES = ("tenants", "users", "sessions", "login_limits", "documents",
-          "document_versions", "version_readers")
+          "document_versions", "version_readers", "version_sources", "version_jobs")
 QUERIES = (
     """SELECT rolname, rolsuper, rolbypassrls, rolcreaterole, rolcreatedb,
               rolreplication, rolinherit, rolcanlogin
        FROM pg_catalog.pg_roles
-       WHERE rolname IN ('rag_app', 'rag_auth', 'rag_policy_reader')""",
+       WHERE rolname IN ('rag_app', 'rag_auth', 'rag_policy_reader',
+                        'rag_version_writer', 'rag_version_processor')""",
     """SELECT c.relname, c.relrowsecurity, c.relforcerowsecurity,
-              owner_role.rolname IN ('rag_app', 'rag_auth', 'rag_policy_reader') AS runtime_owner
+              owner_role.rolname IN ('rag_app', 'rag_auth', 'rag_policy_reader',
+                                    'rag_version_writer', 'rag_version_processor') AS runtime_owner
        FROM pg_catalog.pg_class c
        JOIN pg_catalog.pg_namespace n ON n.oid = c.relnamespace
        JOIN pg_catalog.pg_roles owner_role ON owner_role.oid = c.relowner
        WHERE n.nspname = 'app_core' AND c.relkind = 'r'
          AND c.relname IN ('tenants', 'users', 'sessions', 'login_limits',
-                          'documents', 'document_versions', 'version_readers')""",
+                          'documents', 'document_versions', 'version_readers',
+                          'version_sources', 'version_jobs')""",
     # Reject all direct memberships for these minimal roles. Any indirect path
     # must start with a direct edge, regardless of PG16 INHERIT/SET options.
     """SELECT member_role.rolname AS member_name, granted_role.rolname AS role_name
        FROM pg_catalog.pg_auth_members m
        JOIN pg_catalog.pg_roles member_role ON member_role.oid = m.member
        JOIN pg_catalog.pg_roles granted_role ON granted_role.oid = m.roleid
-       WHERE member_role.rolname IN ('rag_app', 'rag_auth', 'rag_policy_reader')""",
+       WHERE member_role.rolname IN ('rag_app', 'rag_auth', 'rag_policy_reader',
+                                    'rag_version_writer', 'rag_version_processor')""",
 )
 
 

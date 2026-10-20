@@ -7,7 +7,7 @@ from fastapi.responses import JSONResponse, RedirectResponse
 from fastapi.templating import Jinja2Templates
 from fastapi.staticfiles import StaticFiles
 
-from app import repository, security
+from app import repository, security, version_service
 from app.config import Settings
 from app.db import create_pool, get_db
 from app.errors import install_error_handlers
@@ -179,11 +179,22 @@ def document_page(
     document = repository.get_document(connection, identity, document_id)
     if document is None:
         raise HTTPException(404, DOCUMENT_NOT_FOUND)
+    # Management belongs to the document owner, independently of reader/share rights.
+    try:
+        can_manage_versions = version_service.get_version_management(connection, identity, document_id) is not None
+    except HTTPException as error:
+        if error.status_code != 404:
+            raise
+        can_manage_versions = False
     return TEMPLATES.TemplateResponse(request, "document.html", {
         "me": public_identity(identity, request),
         "document": document,
+        "can_manage_versions": can_manage_versions,
     })
 
 
 from app.sharing import install_routes as install_sharing_routes
 install_sharing_routes(app, require_identity, optional_identity, public_identity, TEMPLATES)
+
+from app.version_routes import install_routes as install_version_routes
+install_version_routes(app, require_identity, optional_identity, public_identity, TEMPLATES)
