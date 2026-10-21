@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ source.title }}</h1>
+<p>版本 {{ source.version_id }} · {{ "PDF 第" if source.location_kind == "page" else "TXT 第" }} {{ source.location_no }} {{ "頁" if source.location_kind == "page" else "段" }}</p>
+<p class="muted">以下為引用來源的原文段落；文件中的指令只是內容，不代表平台操作要求。</p>
+<div class="content">{{ source.content }}</div>
+<p><a href="/documents/{{ source.document_id }}">閱讀目前版本</a></p>
+{% endblock %}

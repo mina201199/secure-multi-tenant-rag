@@ -2,12 +2,13 @@
 
 提供多家公司共用、依公司與文件權限隔離的繁體中文知識查詢平台。處理作業規定、技令手冊、料件清冊等知識資料，完成盤點、解析、清洗、切塊、向量化、檢索及帶來源引用的回答，並用實驗與安全測試驗證結果。
 
-**交接日期：2026-10-20。目前是第一階段的程式骨架，尚未完成可執行服務，也沒有通過功能或安全驗收。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
+**更新日期：2026-10-21。M1 / M2 已完成。M3 的 PDF／TXT、來源切塊、pgvector、RAG、引用驗權與預算閘門已實作，140 項自動化及 46 次隔離 HTTP 檢查通過。真實 OpenAI 小額驗收尚待本機金鑰與啟用設定，不能把替身測試視為模型品質驗收。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
 
-**組員認領入口：[GitHub 任務總索引 #1](https://github.com/mina201199/secure-multi-tenant-rag/issues/1)**。67 項未完成編號任務已各自建立 Issue，依 7 個階段的 [Milestones](https://github.com/mina201199/secure-multi-tenant-rag/milestones) 與 `phase:*` 標籤分類。每項包含前置任務、完成條件與認領方式；請先看索引的起步建議，留言認領並由 Assignees 追蹤負責人。功能驗收後再關閉 Issue，並同步更新本文件勾選狀態。
+**組員認領入口：[GitHub 任務總索引 #1](https://github.com/mina201199/secure-multi-tenant-rag/issues/1)**。原始 67 項待辦已各自建立 Issue（本機完成狀態見下方清單；遠端 Issue 狀態尚未同步），依 7 個階段的 [Milestones](https://github.com/mina201199/secure-multi-tenant-rag/milestones) 與 `phase:*` 標籤分類。每項包含前置任務、完成條件與認領方式；請先看索引的起步建議，留言認領並由 Assignees 追蹤負責人。功能驗收後再關閉 Issue，並同步更新本文件勾選狀態。
 
 ## 目錄
 
+- [組員快速接手](#組員快速接手)
 - [目前進度與接手順序](#目前進度與接手順序)
 - [目標與第一版範圍](#目標與第一版範圍)
 - [架構與資料流](#架構與資料流)
@@ -23,28 +24,122 @@
 - [後續擴充與未定細節](#後續擴充與未定細節)
 - [最終交付清單](#最終交付清單)
 
+## 組員快速接手
+
+本次交付包含 M1–M3 程式、migration、兩家公司虛構 PDF、測試與操作教學。**目前先做不付費開發與測試，請保持 `OPENAI_ENABLED=false`；真實 API 驗收與 M4 品質實驗尚未完成。** GitHub Issues 尚未同步關閉，進度請以本 README 與各階段驗收紀錄為準。
+
+### 1. 第一次取得與啟動
+
+先安裝 Git 與 Docker Desktop，啟動 Docker Desktop 並使用 Linux containers。不需要另外安裝 Python 或 PostgreSQL。以下為 PowerShell 指令；首次建置需要網路下載映像、套件及 tokenizer 資料。
+
+```powershell
+git clone https://github.com/mina201199/secure-multi-tenant-rag.git
+cd secure-multi-tenant-rag
+if (!(Test-Path .env)) { Copy-Item .env.example .env }
+docker compose config --quiet
+docker compose up --build -d --wait
+docker compose ps -a
+```
+
+預期 `db`、`web` 顯示 healthy，`setup` 顯示 Exited (0)，`worker` 運行中。開啟 [登入頁](http://127.0.0.1:8008/login)；[健康檢查](http://127.0.0.1:8008/health) 與 [API 文件](http://127.0.0.1:8008/docs) 也在同一服務。Swagger 介面會使用外部 CDN。
+
+`.env.example` 的金鑰留空、模型停用是預期設定。新機器會建立示範帳號與原始六份文件；不會包含開發者本機後來上傳的文件、交接案例或資料庫備份。再次初始化不會重設既有資料。
+
+### 2. 登入與核對權限
+
+以下示範帳號的密碼均為 `Demo-Rag-2026!`，只用於本機虛構資料。
+
+| 身分 | 甲公司 | 乙公司 | 初始可閱讀文件 |
+| --- | --- | --- | --- |
+| 管理員 | `a.admin` | `b.admin` | 本公司公開文件 |
+| 直屬主管 | `a.supervisor` | `b.supervisor` | 本公司公開文件 |
+| 文件擁有者 | `a.owner` | `b.owner` | 本公司三份文件 |
+| 指定讀者 | `a.reader` | `b.reader` | 本公司公開及指定分享文件 |
+| 未獲指定授權者 | `a.outsider` | `b.outsider` | 本公司公開文件 |
+
+先以 `a.reader` 登入，確認出差補助為 NT$1,500；開啟 `/documents/1002`（私人）及 `/documents/2001`（乙公司）均應為 404。登出改用 `b.reader`，補助應為 NT$3,000。管理員及主管也不能越權閱讀私人文件。若要同時登入兩家公司，使用分開的瀏覽器工作階段。
+
+接著依 [M2 教學](docs/milestone-2-guide.md) 操作分享、歷史調閱、封存與交接。PDF 上傳範例為 [甲公司](output/pdf/company-a-policy.pdf)、[乙公司](output/pdf/company-b-policy.pdf)，步驟見 [M3 教學](docs/milestone-3-guide.md)。
+
+**模型未啟用時：**登入、既有文件閱讀與權限管理可用；PDF／TXT 可上傳並解析，但向量索引會失敗，問答會回報服務未啟用／503。這是預期結果，不代表啟動失敗；新版本未完成索引前不會取代舊有效版。不要反覆重試消耗工作嘗試次數。真實模型啟用須另行確認費用及帳號可用性，目前不屬於組員預設操作。
+
+### 3. 執行不付費驗收
+
+先執行完整回歸；它同時建立隔離的 `test-db/rag_test`，不使用本機開發資料庫或真實 API 金鑰：
+
+```powershell
+docker compose --profile test run --build --rm tests
+```
+
+本次交付基準為 **140 passed**；另有一個已記錄的 TestClient 棄用警告。測試會重設測試資料，不能改成連線 `db/rag_local`，也不要與下一組 HTTP 測試同時執行。
+
+若要驗證獨立 web／worker 的上傳、問答、引用與撤權流程，先完成上述回歸，再依序執行：
+
+```powershell
+docker compose --profile http-test up --build -d test-web test-worker
+docker compose --profile test run --rm --no-deps tests python -m tests.smoke_milestone3
+docker compose --profile http-test stop test-web test-worker
+```
+
+基準為 **46 次 HTTP 檢查 PASS**。測試服務在 `http://127.0.0.1:18008`，使用明確標示的模型替身；它只證明流程與權限，不能代表真實模型品質。一般服務仍在 8008。測試若失敗，也請執行最後一行停止臨時服務。
+
+### 4. 更新程式、停止服務與排錯
+
+已有專案的組員先用 `git status` 確認自己的修改已提交或保存，再更新；不要直接覆蓋未提交的工作：
+
+```powershell
+git switch main
+git pull --ff-only origin main
+docker compose up --build -d --wait
+```
+
+有既有資料時先備份再升級；migration 會驗證已套用檔案的校驗碼，後續結構修改請新增 migration，不要修改已套用的檔案。資料庫備份、`.env` 與真實文件都不提交 Git。
+
+停止所有本機及測試服務、保留開發資料卷：
+
+```powershell
+docker compose --profile test --profile http-test down
+```
+
+不要加 `-v`，它會刪除資料卷。啟動異常時先看 `docker compose ps -a` 及 `docker compose logs --tail 100 setup web worker`；Docker 連線失敗先確認 Docker Desktop，8008 被占用則先停止占用服務。向組員回報問題時附執行指令、錯誤摘要及 `git rev-parse --short HEAD`，不要貼金鑰或完整環境變數。
+
+### 5. 接續分工與完成條件
+
+目前可先認領的不付費工作如下；請在 [任務索引 #1](https://github.com/mina201199/secure-multi-tenant-rag/issues/1) 找對應 Issue，確認未重複認領。
+
+| 接手方向 | 待辦 | 交付內容 |
+| --- | --- | --- |
+| 題庫 | M4-01～04 | 30 題核心、至少 100 題驗收、開發／驗收分組及每題授權與原文證據；需要人工校對 |
+| 評估工具 | M4-05～09、11～13 | 可重現的比較指令、指標與版本紀錄；先完成框架，真實模型成績保留待驗證 |
+| 安全報告 | M4-10、14 | 整理既有權限矩陣、失敗及修正證據，補完整評估情境 |
+| 交付整理 | M4-15 與最終交付清單 | 第四階段教學、展示腳本、面試筆記、CI 與授權檢查 |
+| 真實模型驗收（暫待） | M3B-05 及 M4 真實模型部分 | 明確啟用後再驗證可用性、實際費用、檢索與答案品質 |
+
+開發請從更新後的 `main` 建立功能分支，例如 `git switch -c codex/m4-evaluation`。完成後執行相關測試，更新 README 及驗收紀錄，透過 PR 說明變更、測試與限制；驗收通過再關閉 Issue。替身測試結果不能填成真實模型分數。
+
 ## 目前進度與接手順序
 
-`[x]` 僅表示文件或程式已存在；不表示功能已通過驗收。未經執行驗證的模組均須由接手者測試。
+目前已完成第三階段程式與不付費權限驗收，並升級本機服務。OpenAI 尚未啟用；缺少金鑰時明確回報，不產生假答案。
 
-| 區塊 | 現況 | 接手者應做的事 |
+- [第三階段操作教學與 API](docs/milestone-3-guide.md)
+- [第三階段驗收紀錄與待完成項目](docs/milestone-3-verification.md)
+
+- [第二階段操作教學與 API](docs/milestone-2-guide.md)
+- [第二階段驗收紀錄](docs/milestone-2-verification.md)
+- [第一階段操作與測試帳號](docs/milestone-1-guide.md)（階段歷史紀錄）
+
+| 區塊 | 現況 | 後續工作 |
 | --- | --- | --- |
-| 需求與架構決策 | 已完成決策稿 | 先閱讀權限、版本、交接及預算限制 |
-| Docker / Compose | 已有配置，未完成啟動驗證 | 補齊入口、初始化及測試目錄後建置 |
-| `app/config.py` | 已有環境設定與基本檢查 | 與啟動流程整合並測試 |
-| `app/db.py` | 已有 psycopg 連線與 request 交易依賴 | 確認交易與錯誤回滾行為 |
-| `app/security.py` | 已有密碼驗證、Session、CSRF、登入限流等函式 | 接上路由、資料表與頁面，驗證行為 |
-| `app/repository.py` | 已有帶 tenant 與閱讀條件的 SQL 查詢 | 補資料表、API 與越權案例；尚無 RLS |
-| API / HTML 頁面 | 尚未建立 | 補 `app/main.py`、路由與 Jinja2 範本 |
-| 初始化 / 測試帳號 | 尚未建立 | 補 `app/bootstrap.py`、schema 與兩家公司 seed |
-| 自動化測試 | 尚未建立 | 補 `tests/`，建立 API 與資料庫驗收 |
-| 白話教學 | 尚未建立獨立教學檔 | 每階段補操作步驟、設計解釋與練習 |
-| 文件生命週期 / RLS / RAG / 評估 | 尚未實作 | 依下方四個階段完成 |
+| 需求與架構 | 已有決策稿及 M1–M3 教學 | M4 評估設計 |
+| 啟動與資料庫 | 已有備份、可重跑 migration、Docker 啟動驗收 | 新增資料模型時補 migration |
+| 登入與帳號 | Session、CSRF、限流、啟停及 Session 撤銷 | 保持回歸測試 |
+| 文件生命週期 | 分享、不可覆寫版本、PDF／TXT 上傳、封存、歷史權限及主管交接 | 保持回歸測試 |
+| RLS | 17 張表強制 RLS，含原檔、解析、向量及用量 | 新表持續補政策及測試 |
+| 背景處理 | 受限 PDF／TXT 解析、600/60 token 切塊、向量、原子切版 | 金鑰啟用後重試待索引文件 |
+| 測試 | 140 項回歸、46 次 M3 HTTP；真實 PostgreSQL 與模型替身 | 真實模型驗收待完成 |
+| RAG / 模型 / 評估 | 精確 Top-5、原文證據回答、引用三次驗權、全域預算 | OpenAI 小額驗收與 M4 品質實驗 |
 
-**第一個可以驗收的目標：兩家公司的預建帳號各自登入後，只能列出及開啟自己有權閱讀的文件；直接呼叫 API 或猜測 ID 也不能越權。**
-
-建議接手順序：先補資料庫 schema 與 seed → 接上登入、登出與身分驗證 → 補文件清單與內容 API / 頁面 → 完成第一階段測試 → 補教學。第一階段通過後，再進入版本、交接與 RLS，最後才接付費模型。
-
+下一步：先完成 M4 題庫、評估工具、既有安全結果整理與 CI 等不付費工作。真實 OpenAI 小額驗收暫待明確啟用；需先核對當時費率與帳號可用性，再執行虛構資料驗收及真實品質比較。
 ## 目標與第一版範圍
 
 例：A 公司有出差補助 NT$1,500 的規定，B 公司有 NT$3,000 的規定。A 公司員工提問時，只能搜尋 A 公司內自己有權讀取的資料。即使 B 公司文件更相近，也不能把 B 公司內容送給模型或 Reranker。
@@ -61,7 +156,7 @@
 
 ## 架構與資料流
 
-以下是**目標架構**。目前只有設定、連線、安全函式與部分文件查詢；圖中的 Web、worker、RLS、檔案處理及模型整合仍待完成。
+以下架構的 M1–M3 管線已實作；外部 OpenAI 實際驗收及 EVAL 比較實驗仍待完成。
 
 ```mermaid
 flowchart TD
@@ -108,57 +203,48 @@ flowchart TD
 | 層次 | 決定 / 現有設定 | 實作狀態 |
 | --- | --- | --- |
 | 語言與執行環境 | Python；Docker 基底 `python:3.12-slim` | 已有 Dockerfile |
-| Web / API | FastAPI + Uvicorn | 已列相依；尚無應用入口 |
-| HTML | Jinja2，同一個 FastAPI 服務提供頁面 | 已列相依；範本未建立 |
-| 表單 / 上傳 | python-multipart | 已列相依；路由未建立 |
-| 資料庫 | PostgreSQL 16 | Compose 已選映像；schema 未建立 |
-| 向量資料庫 | pgvector；`pgvector/pgvector:pg16` | 映像已設定；extension 與向量表未建立 |
+| Web / API | FastAPI + Uvicorn | 已建立應用入口與路由 |
+| HTML | Jinja2，同一個 FastAPI 服務提供頁面 | 已建立登入、文件管理、歷史、交接及帳號範本 |
+| 表單 / 上傳 | python-multipart | 已有登入、管理、PDF／TXT 上傳及問答表單 |
+| 資料庫 | PostgreSQL 16 | 已建立 M1 schema、M2 migration 與 seed |
+| 向量資料庫 | pgvector；`pgvector/pgvector:pg16` | 已啟用 extension、1536 維向量及精確搜尋 |
 | DB 存取 | psycopg 3 + 明確 SQL；目前無 ORM | 已有部分連線與查詢 |
-| 登入與密碼 | 隨機 Session token + HttpOnly Cookie；Argon2 密碼雜湊 | 已有函式；端到端流程未完成 |
-| 隔離 | API 授權 + PostgreSQL RLS + 關聯約束 | 僅有部分 API 查詢條件，RLS 未實作 |
-| Embedding | 決策採 `text-embedding-3-small` | 尚未整合 SDK / API |
-| 回答 | 決策採 `gpt-5.4-mini` | 尚未整合 SDK / API |
-| 解析 / tokenizer | 必須保留來源位置與 token 計數 | 具體套件尚待選定 |
-| 背景工作 | 持久化工作、可重試、可恢復、可信 tenant 情境 | 機制與 worker 尚待實作 |
-| 測試 | pytest + HTTPX；真實 PostgreSQL 驗證 RLS | 已列相依，測試尚未建立 |
-| 本機編排 | Docker Compose；web 綁定 `127.0.0.1:8008` | 配置已存在，未通過啟動驗收 |
+| 登入與密碼 | 隨機 Session token + HttpOnly Cookie；Argon2 密碼雜湊 | 已完成登入 / 登出與端到端驗證 |
+| 隔離 | API 授權 + PostgreSQL RLS + 關聯約束 | M1–M3 API、RLS、關聯約束與受限操作已驗收 |
+| Embedding | 決策採 `text-embedding-3-small` | 已整合 HTTP API 與預算；真實呼叫待金鑰 |
+| 回答 | 決策採 `gpt-5.4-mini` | 已整合 HTTP API 與預算；真實呼叫待金鑰 |
+| 解析 / tokenizer | 必須保留來源位置與 token 計數 | pdfplumber + tiktoken，保留頁次／段落與文字偏移 |
+| 背景工作 | 持久化工作、可重試、可恢復、可信 tenant 情境 | 已有解析、切塊、Embedding、租約恢復與原子切版 |
+| 測試 | pytest + HTTPX；真實 PostgreSQL 驗證 RLS | 已建立真實 PostgreSQL 與 API 測試 |
+| 本機編排 | Docker Compose；web 綁定 `127.0.0.1:8008` | 已通過建置、初始化及健康檢查 |
 
-實際版本範圍以 [requirements.txt](requirements.txt) 為準。目前使用版本範圍，尚無鎖定檔；接手時記錄通過驗收的確切版本。沒有既定 React、LangChain、LangGraph、Redis 或 Celery 依賴；如需新增，先說明必要性並更新架構決策。Hybrid、Reranker、第二個 Embedding 模型在對應實驗前選定與記錄。
+實際版本範圍以 [requirements.txt](requirements.txt) 為準。相依範圍配合 `requirements.lock.txt` 鎖定本次驗證的確切版本，Docker 建置使用該約束檔。沒有既定 React、LangChain、LangGraph、Redis 或 Celery 依賴；如需新增，先說明必要性並更新架構決策。Hybrid、Reranker、第二個 Embedding 模型在對應實驗前選定與記錄。
 
 ## 目前目錄與已知啟動缺口
 
+M1–M3 程式啟動已驗證；真實模型尚待設定，詳見 M3 驗收紀錄。
+
 ```text
-.
-├── README.md
-├── docs/
-│   └── secure-multi-tenant-rag-decision-draft.md
-├── app/
-│   ├── __init__.py
-│   ├── config.py       # 環境設定與基本安全檢查
-│   ├── db.py           # psycopg 連線 / request 交易
-│   ├── security.py     # 密碼、Session、CSRF、登入限流函式
-│   └── repository.py   # tenant 與閱讀權限 SQL 條件
-├── compose.yaml
-├── Dockerfile
-├── requirements.txt
-├── .dockerignore
-├── .gitattributes
-└── .gitignore
+app/
+  main.py / security.py / config.py   # Web 入口、Session、CSRF、設定
+  db.py / repository.py              # 交易、簽章身分、目前版本授權查詢
+  bootstrap.py / schema.sql          # 初始化角色、M1 起始資料
+  migrations.py / migrations/        # 有校驗碼的結構遷移
+  policies.sql / grants.sql          # RLS、身分驗證與角色授權
+  lifecycle.py / lifecycle.sql       # M2 API、頁面與受限資料庫操作
+  ingestion.py / worker.py          # 受限 PDF／TXT 解析與租約工作
+  models.py / rag.py / rag_routes.py # OpenAI、預算、授權檢索與證據回答
+  retrieval.sql                     # M3 RLS 與受限資料庫操作
+  templates/                        # 登入、文件、分享、版本、歷史、交接、帳號頁面
+tests/                              # M1–M3、RLS、migration、並行、模型替身及 HTTP 驗收
+scripts/verify-running.ps1           # Windows 主機的既有文件 HTTP 驗收
+docs/                               # 決策稿、各階段教學與驗收紀錄
 ```
 
-已知缺口：
-
-- Dockerfile 的 `COPY tests ./tests` 指向尚不存在的 `tests/`，因此目前不能完成正常建置。
-- Dockerfile 的 `uvicorn app.main:app` 尚無對應的 `app/main.py`。
-- Compose `setup` 的 `python -m app.bootstrap` 尚無對應模組。
-- SQL 參照的 `app_core` schema 與資料表尚無建立腳本。
-- 尚無 HTML 範本、seed 帳號、可操作的登入流程、測試或獨立教學檔。
-
-建議後續按責任拆分 `routers/`、`services/`、`templates/`、`workers/`、資料庫遷移、`tests/`、`evals/` 與教學文件；這些都是待新增的模組，不是現有目錄。
-
+原檔存於不可改寫的 source_files，解析文字與來源位置另存 parsed_sources，chunks 包含向量並受目前版本 ACL 限制。完整設定與上限見第三階段教學。
 ## 環境與啟動方式
 
-前置條件：Git、支援 Linux containers 的 Docker 與 Docker Compose。本專案初期不需 OpenAI 金鑰；先完成登入與隔離驗收再接模型。
+前置條件：Git、支援 Linux containers 的 Docker 與 Docker Compose。登入及權限測試不需要金鑰；真實 Embedding／問答需要在 .env 設定 OpenAI 並明確啟用。
 
 ### 現在可執行的配置檢查
 
@@ -168,19 +254,19 @@ docker compose config --quiet
 
 這只檢查 Compose 配置，不能證明映像能建置、API 能啟動或權限正確。
 
-### 補齊第一階段之後的預定操作
+### 啟動目前版本
 
-以下是待驗收的目標指令，目前缺少上述模組，**不能把它當成已可運作的快速啟動流程**：
+執行以下指令，等待資料庫及 Web 健康檢查通過：
 
 ```powershell
-docker compose up --build -d
+docker compose up --build -d --wait
 docker compose ps
-docker compose logs setup web
+docker compose logs setup web worker
 ```
 
-預定服務為 `http://127.0.0.1:8008`；`/health`、`/docs` 與登入頁須由第一階段實作。測試帳號及密碼須隨 seed 與教學補上，目前尚無可用帳密。
+服務為 http://127.0.0.1:8008/login；另有 `/health`、`/docs`。示範帳號如 `a.reader`、`b.reader`，密碼均為 `Demo-Rag-2026!`。完整帳號及 M2 操作見第二階段教學。
 
-預定自動化驗收指令：
+自動化驗收指令：
 
 ```powershell
 docker compose --profile test run --build --rm tests
@@ -195,15 +281,20 @@ docker compose down
 | --- | --- |
 | `DATABASE_URL` | web 與測試的 runtime 連線；使用 `rag_app`，不能用資料庫 owner |
 | `DATABASE_ADMIN_URL` | 僅初始化及指定測試使用，不能提供給 web |
-| `RUNTIME_DB_PASSWORD` | 初始化 runtime 角色時使用；初始化程式尚未建立 |
+| `RUNTIME_DB_PASSWORD` | 初始化 runtime 角色時使用；由 bootstrap 讀取 |
+| `WORKER_DB_PASSWORD` | 初始化獨立的 rag_worker 角色 |
+| `WORKER_DATABASE_URL` | 僅 worker 與指定測試使用，web 不持有 |
 | `APP_BASE_URL` | 本機設定為 `http://127.0.0.1:8008`，供 Origin / CSRF 驗證 |
-| `APP_CSRF_SECRET` | 簽章密鑰；程式要求至少 32 字元 |
+| `APP_CSRF_SECRET` | CSRF 與分域的資料庫情境簽章密鑰；至少 32 字元，setup / web 必須一致 |
 | `APP_ENV` | 現有環境分為 local / test；其他環境要求 HTTPS 及 Secure Cookie |
 | `COOKIE_SECURE` | 本機 HTTP 為 false；非本機環境須 true |
+| `OPENAI_API_KEY` | 透過本機 `.env` 提供 web／worker，測試不使用真實金鑰 |
+| `OPENAI_ENABLED` | 預設 false；明確啟用才允許外呼 |
+| `OPENAI_PRICE_REVISION` | 本版要求 `2026-10-21`，費率與帳號可用性須先查核 |
 
-現有 Session 設定是閒置 30 分鐘、最長 8 小時；登入 CSRF 有效 10 分鐘，登入限制以帳號與來源位址組合計數，每 10 分鐘超過 10 次回傳 429。這些是已寫入程式的初值，尚待驗證，且目前不是可由環境變數全部覆寫的設定。
+現有 Session 設定是閒置 30 分鐘、最長 8 小時；登入 CSRF 有效 10 分鐘，登入限制以帳號與來源位址組合計數，每 10 分鐘超過 10 次回傳 429。這些初值已納入驗收，目前不是可由環境變數全部覆寫的設定。
 
-Compose 中的 `local-*` 與資料庫密碼均為本機教學占位值。正式環境需替換並另行部署設計。`.env` 目前不會自動覆蓋 Compose 裡的固定字串，若改採環境變數插值，必須同步更新 Compose 與提供不含真實密鑰的範例。未來 OpenAI 金鑰僅由後端或 worker 取得，不提交 Git、不放前端。
+Compose 中的 `local-*` 與資料庫密碼均為本機教學占位值。正式環境需替換並另行部署設計。`.env` 目前不會自動覆蓋 Compose 裡的固定字串，若改採環境變數插值，必須同步更新 Compose 與提供不含真實密鑰的範例。M3 已針對 OPENAI_API_KEY、OPENAI_ENABLED、OPENAI_PRICE_REVISION 使用 .env 插值；金鑰只提供 web／worker，不提交 Git、不放前端。
 
 ## 必須遵守的權限與業務規則
 
@@ -242,7 +333,7 @@ Compose 中的 `local-*` 與資料庫密碼均為本機教學占位值。正式�
 
 ## 資料模型與資料庫設計任務
 
-以下是邏輯模型與實作建議，**尚無完整 DDL / migration**。第一階段現有 SQL 已依賴 `app_core.tenants`、`users`、`sessions`、`login_limits`、`documents`、`document_readers`；組員需先補齊相容 schema，再以 migration 演進到版本模型。
+M2 migration 已把 M1 文件與名單轉為 `documents`、`document_versions`、`version_readers`，並建立 `history_permissions`、`jobs`、交接範圍及 `audit_events`。M3 新增原檔、解析、chunks（含 embeddings）、索引 manifest 與用量預留；評估模型仍待 M4。
 
 | 邏輯資料 | 需要保存的內容與關聯 |
 | --- | --- |
@@ -273,7 +364,7 @@ Compose 中的 `local-*` 與資料庫密碼均為本機教學占位值。正式�
 
 ## 預計的 API 與頁面契約
 
-以下是**待實作的介面草案**，組員可調整路徑，但須同步更新 README、測試與 OpenAPI。路由權限不能只靠隱藏按鈕。
+下表的登入、文件閱讀、文字版本、分享、封存、歷史、交接與帳號管理已完成。檔案上傳及問答已實作；M2 / M3 的實際路徑及 payload 見各階段教學。路徑變更須同步更新 README、測試與 OpenAPI。路由權限不能只靠隱藏按鈕。
 
 | 模組 | 建議介面 | 規則與預期輸出 |
 | --- | --- | --- |
@@ -306,74 +397,74 @@ Compose 中的 `local-*` 與資料庫密碼均為本機教學占位值。正式�
 
 ### M1：API、資料庫與登入
 
-- [ ] M1-01 建立 `app/main.py`、FastAPI app、設定載入、DB dependency、錯誤處理與 `/health`。
-- [ ] M1-02 建立 `app/bootstrap.py`、`app_core` schema、必要表 / 約束、runtime 角色與初始化權限。
-- [ ] M1-03 建立兩家公司 seed：管理員、主管、擁有者、獲授權與未授權員工，含固定主管關係。
-- [ ] M1-04 建立私人、本公司公開與指定人員閱讀的虛構文件；兩家公司使用相近標題但不同內容。
-- [ ] M1-05 接上 Argon2、登入 / 登出、Session 雜湊保存、Cookie、過期及停用帳號檢查。
-- [ ] M1-06 接上登入 / Session CSRF、Origin 檢查與登入限流，確認失敗嘗試計數不因回滾消失。
-- [ ] M1-07 建立目前身分、文件清單 / 詳細 API 與 Jinja2 頁面，使用可信公司與授權條件。
-- [ ] M1-08 讓 owner 憑證僅出現在初始化；runtime 不持有可任意管理資料庫的憑證。
-- [ ] M1-09 補齊 `tests/`；驗證正常登入、錯誤密碼、過期 / 登出、CSRF、限流、停用與越權。
-- [ ] M1-10 實際完成 Compose 建置、初始化、啟動、健康檢查及 test profile 執行。
-- [ ] M1-11 整理第一階段白話教學、測試帳號、操作步驟、小修改練習與驗收結果。
+- [x] M1-01 建立 `app/main.py`、FastAPI app、設定載入、DB dependency、錯誤處理與 `/health`。
+- [x] M1-02 建立 `app/bootstrap.py`、`app_core` schema、必要表 / 約束、runtime 角色與初始化權限。
+- [x] M1-03 建立兩家公司 seed：管理員、主管、擁有者、獲授權與未授權員工，含固定主管關係。
+- [x] M1-04 建立私人、本公司公開與指定人員閱讀的虛構文件；兩家公司使用相近標題但不同內容。
+- [x] M1-05 接上 Argon2、登入 / 登出、Session 雜湊保存、Cookie、過期及停用帳號檢查。
+- [x] M1-06 接上登入 / Session CSRF、Origin 檢查與登入限流，確認失敗嘗試計數不因回滾消失。
+- [x] M1-07 建立目前身分、文件清單 / 詳細 API 與 Jinja2 頁面，使用可信公司與授權條件。
+- [x] M1-08 讓 owner 憑證僅出現在初始化；runtime 不持有可任意管理資料庫的憑證。
+- [x] M1-09 補齊 `tests/`；驗證正常登入、錯誤密碼、過期 / 登出、CSRF、限流、停用與越權。
+- [x] M1-10 實際完成 Compose 建置、初始化、啟動、健康檢查及 test profile 執行。
+- [x] M1-11 整理第一階段白話教學、測試帳號、操作步驟、小修改練習與驗收結果。
 
-M1 驗收：兩家公司登入、各自可讀文件正確、猜 ID 與直接 API 無法越權，並附測試結果。此時仍須明確註記「尚無資料庫 RLS」；不能宣稱已完成多層隔離。
+M1 驗收：兩家公司登入、各自可讀文件正確、猜 ID 與直接 API 無法越權，並附測試結果。這是 M1 的歷史驗收；現行版本已在 M2 加入並驗證資料庫 RLS。
 
 ### M2：文件權限、版本、封存、交接與 RLS
 
-- [ ] M2-01 設計並 migration 到文件 / 版本 / 有效版本 / 版本擁有者 / 版本 ACL 模型。
-- [ ] M2-02 實作私人、本公司公開及指定同公司有效帳號分享；撤權下一次請求生效。
-- [ ] M2-03 僅目前擁有者可新增版本，新版預設私人且不繼承舊 ACL。
-- [ ] M2-04 新版成功前保留舊有效版；成功後原子切換，禁止未獲新版授權者回退舊版。
-- [ ] M2-05 封存保留所有資料，阻止一般開啟、下載、檢索與背景工作重新啟用。
-- [ ] M2-06 實作獨立歷史調閱與授權後台；檢查版本擁有者權限與完整稽核。
-- [ ] M2-07 實作交接提出、待審、核准 / 拒絕、明確版本範圍與有限主管資訊。
-- [ ] M2-08 核准時重查主管 / 接收人 / 擁有者 / 文件 / 申請，禁止主管自收與跨公司接收。
-- [ ] M2-09 以交易及並行控制防止重複核准、過期申請與部分移轉；保留既有閱讀 ACL。
-- [ ] M2-10 公司管理員僅能啟停本公司預建帳號，不能冒用、改主管、提升角色或自動接管文件。
-- [ ] M2-11 加入 RLS 與必要關聯約束；區分初始化、web、worker 的最低權限角色。
-- [ ] M2-12 測試 RLS 讀寫、背景工作情境、跨 tenant 關聯、連線重用、撤權與停用。
-- [ ] M2-13 完成所有對應 API、頁面及直接 API 越權測試；補第二階段教學。
+- [x] M2-01 設計並 migration 到文件 / 版本 / 有效版本 / 版本擁有者 / 版本 ACL 模型。
+- [x] M2-02 實作私人、本公司公開及指定同公司有效帳號分享；撤權下一次請求生效。
+- [x] M2-03 僅目前擁有者可新增版本，新版預設私人且不繼承舊 ACL。
+- [x] M2-04 新版成功前保留舊有效版；成功後原子切換，禁止未獲新版授權者回退舊版。
+- [x] M2-05 封存保留所有資料，阻止一般開啟、下載、檢索與背景工作重新啟用。
+- [x] M2-06 實作獨立歷史調閱與授權後台；檢查版本擁有者權限與完整稽核。
+- [x] M2-07 實作交接提出、待審、核准 / 拒絕、明確版本範圍與有限主管資訊。
+- [x] M2-08 核准時重查主管 / 接收人 / 擁有者 / 文件 / 申請，禁止主管自收與跨公司接收。
+- [x] M2-09 以交易及並行控制防止重複核准、過期申請與部分移轉；保留既有閱讀 ACL。
+- [x] M2-10 公司管理員僅能啟停本公司預建帳號，不能冒用、改主管、提升角色或自動接管文件。
+- [x] M2-11 加入 RLS 與必要關聯約束；區分初始化、web、worker 的最低權限角色。
+- [x] M2-12 測試 RLS 讀寫、背景工作情境、跨 tenant 關聯、連線重用、撤權與停用。
+- [x] M2-13 完成所有對應 API、頁面及直接 API 越權測試；補第二階段教學。
 
 M2 驗收：權限、版本、歷史、封存與交接規則全部有正反案例；API 與真實 PostgreSQL RLS 都通過測試。
 
 ### M3A：資料盤點、上傳與文件處理
 
-- [ ] M3A-01 建立資料盤點表：公司、業務分類、來源、擁有者、版本、格式、指紋、授權與處理狀態。
-- [ ] M3A-02 選定文字 PDF / TXT 解析套件；定義大小、頁數、編碼與格式驗證及錯誤回應。
-- [ ] M3A-03 原始檔存於受保護位置，保留版本與來源，檔名 / 儲存路徑不可成為授權手段。
-- [ ] M3A-04 PDF 保留實際檔案頁次與跨頁範圍；TXT 固定該版本段落編號。
-- [ ] M3A-05 清洗空白與換行並保存來源對應，不能改寫金額、日期、料號、規格與單位。
-- [ ] M3A-06 檢查 PDF 閱讀順序與料件欄位關係；無法可靠解析須失敗，不能直接進索引。
-- [ ] M3A-07 選定並記錄 tokenizer；起始切塊 600 tokens、重疊 60 tokens，保留原文範圍。
-- [ ] M3A-08 實作持久化背景工作、狀態查詢、可恢復步驟、去重、有限重試與逾時。
-- [ ] M3A-09 工作從可信資料取得公司 / 版本情境；撤權、封存與重啟不能造成越權或資料復活。
-- [ ] M3A-10 保存 chunks / embeddings 及模型資訊，通過完整性確認後才允許搜尋。
+- [x] M3A-01 建立資料盤點表：公司、業務分類、來源、擁有者、版本、格式、指紋、授權與處理狀態。
+- [x] M3A-02 選定文字 PDF / TXT 解析套件；定義大小、頁數、編碼與格式驗證及錯誤回應。
+- [x] M3A-03 原始檔存於受保護位置，保留版本與來源，檔名 / 儲存路徑不可成為授權手段。
+- [x] M3A-04 PDF 保留實際檔案頁次與跨頁範圍；TXT 固定該版本段落編號。
+- [x] M3A-05 清洗空白與換行並保存來源對應，不能改寫金額、日期、料號、規格與單位。
+- [x] M3A-06 檢查 PDF 閱讀順序與料件欄位關係；無法可靠解析須失敗，不能直接進索引。
+- [x] M3A-07 選定並記錄 tokenizer；起始切塊 600 tokens、重疊 60 tokens，保留原文範圍。
+- [x] M3A-08 實作持久化背景工作、狀態查詢、可恢復步驟、去重、有限重試與逾時。
+- [x] M3A-09 工作從可信資料取得公司 / 版本情境；撤權、封存與重啟不能造成越權或資料復活。
+- [x] M3A-10 保存 chunks / embeddings 及模型資訊，通過完整性確認後才允許搜尋。
 
 ### M3B：付費用量控制與模型整合
 
-- [ ] M3B-01 整合後端模型客戶端、密鑰環境設定、逾時、限流、重試與錯誤處理。
-- [ ] M3B-02 每次付費呼叫前以交易或等效機制預留最大可能費用，所有平行工作共同計帳。
-- [ ] M3B-03 限制輸入、輸出、重試及工作並行數；剩餘預算不足則停止，不自動加價或換昂貴模型。
-- [ ] M3B-04 保存模型、token、估計 / 實際費用、耗時、預留與結算；處理失敗與重試不重複計帳。
+- [x] M3B-01 整合後端模型客戶端、密鑰環境設定、逾時、限流、重試與錯誤處理。
+- [x] M3B-02 每次付費呼叫前以交易或等效機制預留最大可能費用，所有平行工作共同計帳。
+- [x] M3B-03 限制輸入、輸出、重試及工作並行數；剩餘預算不足則停止，不自動加價或換昂貴模型。
+- [x] M3B-04 保存模型、token、估計 / 實際費用、耗時、預留與結算；處理失敗與重試不重複計帳。
 - [ ] M3B-05 執行前核對模型可用性與當時費率，記錄換算、稅費與誤差緩衝，月上限 NT$300。
-- [ ] M3B-06 建立段落與問題 Embedding；模型 / 維度 / 正規化 / tokenizer 變更可追溯且不可混用。
+- [x] M3B-06 建立段落與問題 Embedding；模型 / 維度 / 正規化 / tokenizer 變更可追溯且不可混用。
 
 ### M3C：授權檢索、回答與引用
 
-- [ ] M3C-01 精確 pgvector 搜尋僅限有效且有權版本，最多 Top-5，不以未授權段落補足。
-- [ ] M3C-02 驗證 query 與所有候選段落的公司、版本、ACL、帳號有效性與處理狀態。
-- [ ] M3C-03 模型前重新驗權；任何 Reranker / 外部服務只能接收已授權候選。
-- [ ] M3C-04 單輪證據式回答與無充分證據拒答；不靠模型既有知識猜公司規定。
-- [ ] M3C-05 防止文件 Prompt Injection 改變權限、工具、外部連線或回答規則。
-- [ ] M3C-06 引用綁實際使用版本與原文位置，前台顯示授權文件名稱及 PDF 頁次 / TXT 段落。
-- [ ] M3C-07 驗證引用存在、位置、授權與支持度，不接受模型捏造來源或未檢索版本。
-- [ ] M3C-08 回覆前再次驗權；問答期間撤權 / 停用 / 封存 / 替換版本時拒絕交付。
-- [ ] M3C-09 不串流、不共用答案快取、不帶上一輪記憶；問答與錯誤不透露未授權文件存在性。
-- [ ] M3C-10 補問答 / 引用 / 處理狀態頁面與第三階段白話教學。
+- [x] M3C-01 精確 pgvector 搜尋僅限有效且有權版本，最多 Top-5，不以未授權段落補足。
+- [x] M3C-02 驗證 query 與所有候選段落的公司、版本、ACL、帳號有效性與處理狀態。
+- [x] M3C-03 模型前重新驗權；任何 Reranker / 外部服務只能接收已授權候選。
+- [x] M3C-04 單輪證據式回答與無充分證據拒答；不靠模型既有知識猜公司規定。
+- [x] M3C-05 防止文件 Prompt Injection 改變權限、工具、外部連線或回答規則。
+- [x] M3C-06 引用綁實際使用版本與原文位置，前台顯示授權文件名稱及 PDF 頁次 / TXT 段落。
+- [x] M3C-07 驗證引用存在、位置、授權與支持度，不接受模型捏造來源或未檢索版本。
+- [x] M3C-08 回覆前再次驗權；問答期間撤權 / 停用 / 封存 / 替換版本時拒絕交付。
+- [x] M3C-09 不串流、不共用答案快取、不帶上一輪記憶；問答與錯誤不透露未授權文件存在性。
+- [x] M3C-10 補問答 / 引用 / 處理狀態頁面與第三階段白話教學。
 
-M3 驗收：PDF / TXT 到帶引用回答的完整流程可重現，失敗 / 重試 / 封存 / 撤權行為可測，付費呼叫具預算控制與帳務。
+M3 驗收：PDF / TXT 到引用的替身流程、權限／越權及預算測試已通過；M3B-05 的官方費率已查核，但真實帳號模型可用性與小額 API 驗收尚未完成。其餘勾選表示程式及不付費案例完成，不代表已測真實模型品質。
 
 ### M4：固定題庫、比較實驗、安全報告與作品集
 
@@ -424,7 +515,7 @@ M3 驗收：PDF / TXT 到帶引用回答的完整流程可重現，失敗 / 重�
 - 每階段保留指令、環境版本、通過 / 失敗摘要、已知限制與必要畫面；失敗不得從報告中移除。
 - 一般日誌不保存密碼、token、文件正文或完整問答；完整虛構題庫與評估結果獨立管理。
 
-目前沒有任何測試通過結果。`requirements.txt` 有 pytest 不等於已完成測試；Compose 有 healthcheck 不等於服務健康。
+M1–M3 完整回歸 140 項通過，另有 46 次 M3 實際 HTTP、瀏覽器與繁中 PDF 檢查。模型使用替身，不能代替真實 API／語意品質驗收；完整結果及已修正失敗見第三階段驗收紀錄。
 
 ## 分工與協作方式
 
@@ -461,28 +552,28 @@ M3 驗收：PDF / TXT 到帶引用回答的完整流程可重現，失敗 / 重�
 
 **Hybrid、Reranker、第二個 Embedding 雖不在起始基準，仍是 M4 必須完成的比較實驗，不能略過。**
 
-### 對應實作前需記錄的決定
+### 已記錄決定與仍待確認事項
 
-- PDF parser、tokenizer、原始檔儲存方式與 migration 工具。
-- 持久化工作與 worker 機制、去重鍵、鎖定方式、重試與恢復策略。
-- 上傳大小 / 頁數、問題長度、工作逾時、輸入 / 輸出 / 重試 / 並行上限。
-- RLS 情境設定與清除、各角色授權、版本範圍 ACL 與歷史權責關係。
+- Parser、tokenizer、原檔儲存、來源範圍與模型 profile 已記於第三階段教學。
+- 持久化工作、解析重用、300 秒租約、三次嘗試及原子索引切換已實作。
+- 檔案、頁數、文字、token、問題、模型輸入／輸出及並行上限已明確設定。
+- 段落、向量及用量 RLS 已完成；真實 OpenAI 的帳號可用性與小額測試尚待執行。
 - Hybrid / 繁體中文斷詞、Reranker 與第二模型、實驗相關性分級與計分方法。
 - 月預算換算與安全緩衝、模型可用性與費率、實際驗收環境版本。
 - LICENSE、相依套件授權、CI、公開展示與部署方式。
 
-上述細節未定，不代表可以無限制接受輸入，或略過已確定的隔離與 NT$300 預算規則。
+尚未完成的模型品質與 M4 實驗，不影響目前必須遵守的隔離、輸入上限與 NT$300 預算規則。
 
 ## 最終交付清單
 
-- [ ] 可重現的本機啟動、初始化、測試與操作文件。
+- [x] 可重現的本機啟動、初始化、測試與操作文件。
 - [ ] 完整 API、Jinja2 介面、schema / migration、兩家公司虛構資料與權限矩陣。
-- [ ] 登入、分享、版本、封存、歷史、交接與帳號啟停的正反驗收。
-- [ ] API + RLS + DB 關聯約束 + 背景工作情境的隔離驗證。
+- [x] 登入、分享、版本、封存、歷史、交接與帳號啟停的正反驗收。
+- [x] API + RLS + DB 關聯約束 + 背景工作情境的隔離驗證。
 - [ ] PDF / TXT 全流程、授權 Top-5、證據回答 / 拒答及來源引用。
 - [ ] NT$300 月用量控制、預留 / 結算、token / 費用 / 延遲記錄。
 - [ ] 30 題核心、至少 100 題驗收、六項真實比較實驗與失敗報告。
 - [ ] 四階段白話教學、練習、架構說明、展示腳本與面試問答。
 - [ ] 授權條款、相依授權檢查與可分享的作品集內容。
 
-本次交接保存的是尚未完成 M1 的開發起點。接手後先讓第一階段可運作並通過測試，再依序完成後續任務。
+M1 / M2 已完成；M3 程式與不付費權限驗收完成，真實 OpenAI 驗收待金鑰。M4 的固定題庫、品質比較、完整安全報告與最終交付仍待完成。

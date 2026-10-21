@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>我的可讀文件</h1>
+<p class="muted">目前共有 {{ documents|length }} 份可閱讀文件。</p>
+<table><thead><tr><th>文件</th><th>分類</th><th>閱讀範圍</th></tr></thead><tbody>
+{% for document in documents %}
+<tr><td><a href="/documents/{{ document.id }}">{{ document.title }}</a></td><td>{{ document.category }}</td><td>{{ {"private":"私人","company":"本公司","selected":"指定人員"}[document.visibility] }}</td></tr>
+{% else %}<tr><td colspan="3">目前沒有可閱讀的文件。</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

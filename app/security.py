@@ -8,6 +8,7 @@ from datetime import datetime, timedelta, timezone
 from argon2 import PasswordHasher
 from argon2.exceptions import VerificationError, InvalidHashError
 from fastapi import HTTPException, Request
+from app.db import bind_identity
 
 PASSWORD_HASHER = PasswordHasher()
 DUMMY_PASSWORD_HASH = PASSWORD_HASHER.hash(secrets.token_urlsafe(32))
@@ -71,29 +72,19 @@ def check_session_csrf(request, submitted):
     check_origin(request)
     raw = request.cookies.get(SESSION_COOKIE, "")
     expected = session_csrf(request.app.state.settings, raw)
-    if not raw or not submitted or not hmac.compare_digest(expected, submitted):
+    if not raw or not submitted or not hmac.compare_digest(expected.encode(), submitted.encode()):
         raise HTTPException(403, "操作驗證失敗，請重新載入頁面")
 
 
 def read_identity(connection, raw_session, settings):
     if not raw_session or len(raw_session) > 200:
         return None
-    now = utcnow()
-    identity = connection.execute(
-        """SELECT u.id, u.tenant_id, u.username, u.display_name, u.role,
-                  t.name AS tenant_name, s.token_hash
-           FROM app_core.sessions s
-           JOIN app_core.users u ON u.id = s.user_id
-           JOIN app_core.tenants t ON t.id = u.tenant_id
-           WHERE s.token_hash = %s AND u.is_active = true
-             AND s.expires_at > %s AND s.last_seen_at > %s""",
-        (hash_token(raw_session), now, now - timedelta(minutes=settings.idle_minutes)),
-    ).fetchone()
+    identity = connection.execute("SELECT * FROM app_core.auth_resolve(%s)", (hash_token(raw_session),)).fetchone()
+    # Authentication is the first request operation. Release the activity-update
+    # lock before business locks, so account deactivation cannot deadlock against it.
+    connection.commit()
     if identity:
-        connection.execute(
-            "UPDATE app_core.sessions SET last_seen_at = %s WHERE token_hash = %s",
-            (now, identity["token_hash"]),
-        )
+        bind_identity(connection, identity, identity["token_hash"], settings.csrf_secret)
     return identity
 
 
@@ -118,7 +109,7 @@ def attempt_login(connection, request, username, password):
     if limit["attempts"] > 10:
         raise HTTPException(429, "嘗試次數過多，請稍後再試", headers={"Retry-After": "600"})
     user = connection.execute(
-        "SELECT id, password_hash, is_active FROM app_core.users WHERE username = %s",
+        "SELECT * FROM app_core.auth_candidate(%s)",
         (normalized,),
     ).fetchone()
     matches = password_matches(password, user["password_hash"] if user else DUMMY_PASSWORD_HASH)
@@ -129,13 +120,9 @@ def attempt_login(connection, request, username, password):
     settings = request.app.state.settings
     previous = request.cookies.get(SESSION_COOKIE)
     if previous:
-        connection.execute("DELETE FROM app_core.sessions WHERE token_hash = %s", (hash_token(previous),))
-    connection.execute(
-        """INSERT INTO app_core.sessions
-           (token_hash, user_id, created_at, last_seen_at, expires_at)
-           VALUES (%s, %s, %s, %s, %s)""",
-        (hash_token(raw), user["id"], now, now, now + timedelta(hours=settings.session_hours)),
-    )
+        connection.execute("SELECT app_core.auth_logout(%s)", (hash_token(previous),))
+    bind_identity(connection, user, hash_token(raw), settings.csrf_secret)
+    connection.execute("SELECT app_core.auth_issue()")
     return raw
 
 

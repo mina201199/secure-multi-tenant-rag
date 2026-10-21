@@ -1,0 +1,10 @@
+{% extends "base.html" %}
+{% block title %}{{ document.title }} · 公司知識文件平台{% endblock %}
+{% block content %}
+<p><a href="/documents">← 返回文件清單</a></p>
+<h1>{{ document.title }}</h1>
+<p class="muted">{{ document.category }}</p>
+<p><a href="/api/documents/{{ document.id }}/download">下載目前版本文字</a>
+{% if document.owner_id == identity.id %} · <a href="/manage/{{ document.id }}">管理此文件</a>{% endif %}</p>
+<div class="content">{{ document.content }}</div>
+{% endblock %}

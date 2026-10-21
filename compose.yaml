@@ -10,6 +10,9 @@ x-runtime: &runtime
   APP_CSRF_SECRET: local-teaching-only-csrf-key-change-before-deployment
   APP_ENV: local
   COOKIE_SECURE: "false"
+  OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+  OPENAI_ENABLED: ${OPENAI_ENABLED:-false}
+  OPENAI_PRICE_REVISION: ${OPENAI_PRICE_REVISION:-}
 
 services:
   db:
@@ -31,6 +34,8 @@ services:
     environment:
       DATABASE_ADMIN_URL: postgresql://rag_owner:local-bootstrap-only@db:5432/rag_local
       RUNTIME_DB_PASSWORD: local-runtime-only
+      WORKER_DB_PASSWORD: local-worker-only
+      APP_CSRF_SECRET: local-teaching-only-csrf-key-change-before-deployment
     command: ["python", "-m", "app.bootstrap"]
     depends_on:
       db:
@@ -49,6 +54,18 @@ services:
       interval: 10s
       timeout: 5s
       retries: 10
+
+  worker:
+    <<: *app
+    environment:
+      WORKER_DATABASE_URL: postgresql://rag_worker:local-worker-only@db:5432/rag_local
+      OPENAI_API_KEY: ${OPENAI_API_KEY:-}
+      OPENAI_ENABLED: ${OPENAI_ENABLED:-false}
+      OPENAI_PRICE_REVISION: ${OPENAI_PRICE_REVISION:-}
+    command: ["python", "-m", "app.worker"]
+    depends_on:
+      setup:
+        condition: service_completed_successfully
 
   test-db:
     image: pgvector/pgvector:pg16
@@ -73,11 +90,41 @@ services:
       DATABASE_URL: postgresql://rag_app:local-test-runtime-only@test-db:5432/rag_test
       DATABASE_ADMIN_URL: postgresql://rag_owner:local-test-bootstrap-only@test-db:5432/rag_test
       RUNTIME_DB_PASSWORD: local-test-runtime-only
+      WORKER_DB_PASSWORD: local-test-worker-only
+      WORKER_DATABASE_URL: postgresql://rag_worker:local-test-worker-only@test-db:5432/rag_test
       APP_ENV: test
-    command: ["pytest", "-q", "--tb=short", "-p", "no:cacheprovider"]
+      OPENAI_API_KEY: ""
+      OPENAI_ENABLED: "false"
+      RAG_TEST_PROVIDER: "true"
+    command: ["python", "-m", "pytest", "-q", "--tb=short", "-p", "no:cacheprovider"]
     depends_on:
       test-db:
         condition: service_healthy
+
+  test-web:
+    <<: *app
+    profiles: ["http-test"]
+    environment:
+      <<: *runtime
+      DATABASE_URL: postgresql://rag_app:local-test-runtime-only@test-db:5432/rag_test
+      APP_BASE_URL: http://127.0.0.1:18008
+      APP_ENV: test
+      RAG_TEST_PROVIDER: "true"
+      OPENAI_API_KEY: ""
+      OPENAI_ENABLED: "false"
+    ports:
+      - "127.0.0.1:18008:8000"
+
+  test-worker:
+    <<: *app
+    profiles: ["http-test"]
+    environment:
+      WORKER_DATABASE_URL: postgresql://rag_worker:local-test-worker-only@test-db:5432/rag_test
+      APP_ENV: test
+      RAG_TEST_PROVIDER: "true"
+      OPENAI_API_KEY: ""
+      OPENAI_ENABLED: "false"
+    command: ["python", "-m", "app.worker"]
 
 volumes:
   rag_data:

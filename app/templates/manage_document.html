@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>{{ document.title }}：文件管理</h1>
+<p>目前版本 #{{ document.current_version_id }} · {{ "已封存" if document.status == "archived" else "使用中" }}</p>
+{% if document.status == "ready" %}
+<section><h2>目前版本的閱讀範圍</h2>
+<form method="post" action="/actions/sharing">
+<input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="document_id" value="{{ document.id }}"><input type="hidden" name="version_id" value="{{ document.current_version_id }}">
+<label for="visibility">分享方式</label><select id="visibility" name="visibility">
+{% for value,label in [("private","私人：只有擁有者"),("company","本公司所有有效帳號"),("selected","指定同公司人員")] %}
+<option value="{{ value }}" {% if current.visibility == value %}selected{% endif %}>{{ label }}</option>{% endfor %}</select>
+<p>以下名單僅於「指定同公司人員」時使用；取消勾選即撤銷該人的指定閱讀權。</p>
+{% for p in people %}<label><input type="checkbox" name="user_ids" value="{{ p.id }}" {% if p.id in readers %}checked{% endif %}>{{ p.display_name }}（{{ p.username }}）</label>{% endfor %}
+<button>儲存閱讀範圍</button></form></section>
+<section><h2>建立新版本</h2>
+<p>可以貼上文字，或上傳 PDF／TXT。新版預設私人，不繼承閱讀名單；解析及向量索引完成前舊版繼續使用。重新載入本頁可查看結果。</p>
+<form method="post" action="/actions/create_version">
+<input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="document_id" value="{{ document.id }}">
+<label for="content">新版完整內容（最多 1 MiB UTF-8）</label><textarea id="content" name="content" required maxlength="1048576"></textarea>
+<button>提交新版本</button></form></section>
+<form method="post" action="/upload" enctype="multipart/form-data">
+<input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="document_id" value="{{ document.id }}">
+<input type="hidden" name="title" value="{{ document.title }}"><input type="hidden" name="category" value="{{ document.category }}">
+<label for="file">以 PDF 或 TXT 建立新版本</label><input type="file" name="file" id="file" accept=".pdf,.txt" required>
+<button>上傳新版本</button></form>
+{% endif %}
+<section><h2>版本與處理狀態</h2>
+<table><tr><th>版本</th><th>狀態</th><th>建立時間</th></tr>
+{% for v in versions %}<tr><td>#{{ v.id }}{% if v.id == document.current_version_id %}（目前）{% endif %}</td><td>{{ {"ready":"已完成","processing":"處理中","failed":"失敗"}[v.state] }}</td><td>{{ v.created_at|taipei_time }}</td></tr>{% endfor %}</table>
+<p><a href="/history">歷史版本的調閱及授權請前往獨立後台</a>。</p>
+{% for s in sources %}<p class="muted">#{{ s.version_id }} · {{ s.filename }} · {{ s.bytes }} bytes · {{ "索引完成（" ~ s.chunks ~ " 段）" if s.indexed else "尚未完成索引" }}<br>SHA-256：<small style="overflow-wrap:anywhere">{{ s.source_hash }}</small></p>{% endfor %}
+{% for j in jobs %}<p>版本 #{{ j.version_id }}：{{ {"queued":"排隊中","running":"處理中","done":"完成","failed":"失敗","cancelled":"已取消"}[j.status] }}{% if j.error %} · {{ j.error }}{% endif %}</p>
+{% if j.status == "failed" and j.attempts < 3 and document.status == "ready" %}
+<form method="post" action="/actions/retry"><input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="document_id" value="{{ document.id }}"><input type="hidden" name="job_id" value="{{ j.id }}"><button>重試版本 #{{ j.version_id }}</button></form>{% endif %}{% endfor %}
+</section>
+{% if document.status == "ready" %}
+<section><h2>申請交接</h2><p>選定接收人與版本範圍，交由你的直屬主管審核。主管不能核准自己接收；審核頁不顯示文件名稱與內容。</p>
+<form method="post" action="/actions/transfer">
+<input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="document_id" value="{{ document.id }}">
+<label for="recipient">接收人</label><select name="recipient_id" id="recipient" required>{% for p in people if p.id != identity.id and p.id != manager_id %}<option value="{{ p.id }}">{{ p.display_name }}（{{ p.username }}）</option>{% endfor %}</select>
+<p>交接版本（必須包含目前版本；未勾選的歷史版本不移轉）</p>
+{% for v in versions if v.owner_id == identity.id and v.state == "ready" %}
+<label><input type="checkbox" name="version_ids" value="{{ v.id }}" {% if v.id == document.current_version_id %}checked{% endif %}>版本 #{{ v.id }}{% if v.id == document.current_version_id %}（目前）{% endif %}</label>{% endfor %}
+<label for="reason">交接原因（主管可見，請勿填入文件內容）</label><textarea id="reason" name="reason" required maxlength="500"></textarea>
+<button>送出交接申請</button></form></section>
+<section><h2>封存文件</h2><p>封存後停止前台閱讀及下載，並取消未完成的新版本工作。資料保留於歷史後台，仍需獨立調閱授權。</p>
+<form method="post" action="/actions/archive"><input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="document_id" value="{{ document.id }}"><button class="danger">封存此文件</button></form></section>
+{% endif %}
+{% endblock %}

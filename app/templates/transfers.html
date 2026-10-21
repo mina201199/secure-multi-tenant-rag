@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>交接申請與審核</h1>
+<p>此處顯示你提出的申請及由你審核的待辦。審核資料只包含申請編號、申請人、接收人與原因。</p>
+{% for t in transfers %}
+<section><h2>申請 #{{ t.id }}</h2>
+<p>申請人：{{ people.get(t.applicant_id,"帳號已停用") }} · 接收人：{{ people.get(t.recipient_id,"帳號已停用") }}</p>
+<p>原因：{{ t.reason }}</p><p>狀態：{{ {"pending":"待審核","approved":"已核准","rejected":"已拒絕"}[t.status] }}</p>
+{% if t.applicant_id != identity.id and t.status == "pending" %}
+<form method="post" action="/actions/approve"><input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="transfer_id" value="{{ t.id }}"><button>核准申請 #{{ t.id }}</button></form>
+<form method="post" action="/actions/reject"><input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="transfer_id" value="{{ t.id }}"><button class="danger">拒絕申請 #{{ t.id }}</button></form>
+{% endif %}</section>
+{% else %}<p>目前沒有申請或待審案件。</p>{% endfor %}
+{% endblock %}

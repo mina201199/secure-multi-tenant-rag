@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>本公司帳號管理</h1><p>只能啟用或停用既有帳號；停用會立即撤銷登入狀態，不會把文件移交給管理員。</p>
+<table><tr><th>帳號</th><th>狀態</th><th>操作</th></tr>
+{% for a in accounts %}<tr><td>{{ a.display_name }}<br>{{ a.username }}</td><td>{{ "啟用" if a.is_active else "停用" }}</td><td>
+<form method="post" action="/actions/account"><input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="user_id" value="{{ a.id }}"><input type="hidden" name="is_active" value="{{ 'false' if a.is_active else 'true' }}"><button>{{ "停用" if a.is_active else "啟用" }}</button></form>
+</td></tr>{% endfor %}</table>
+{% endblock %}

@@ -4,6 +4,7 @@
 .venv/
 __pycache__/
 .pytest_cache/
+tmp/
 *.py[cod]
 data/
 reports/*.json

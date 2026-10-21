@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>歷史調閱與授權</h1>
+<p>歷史閱讀權獨立於目前版本的分享。每次調閱都會留下紀錄；管理員與主管沒有自動調閱權。</p>
+<h2>我獲准調閱的歷史版本</h2>
+<ul>{% for v in histories %}<li><a href="/history/{{ v.id }}">{{ v.title }} · 版本 #{{ v.id }}</a></li>{% else %}<li>目前沒有可調閱的歷史版本。</li>{% endfor %}</ul>
+<h2>我擁有的版本：歷史權限管理</h2>
+<p>授權僅在版本成為舊版或文件封存後適用。即使是版本擁有者，也須把自己加入歷史閱讀名單才能調閱。</p>
+{% for v in owned %}
+<section><h3>版本 #{{ v.id }}{% if v.id == v.current_version_id %}（目前版本）{% endif %}</h3>
+<form method="post" action="/actions/history_permissions">
+<input type="hidden" name="csrf_token" value="{{ csrf }}"><input type="hidden" name="version_id" value="{{ v.id }}">
+{% for p in people %}{% set selected = grants|selectattr("version_id","equalto",v.id)|selectattr("user_id","equalto",p.id)|list %}
+<label><input type="checkbox" name="user_ids" value="{{ p.id }}" {% if selected %}checked{% endif %}>{{ p.display_name }}（{{ p.username }}）</label>{% endfor %}
+<button>儲存版本 #{{ v.id }} 的歷史名單</button></form></section>
+{% else %}<p>目前沒有由你負責的已完成版本。</p>{% endfor %}
+{% endblock %}

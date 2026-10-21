@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>文件問答</h1>
+<p>只查詢目前有權閱讀且已完成索引的文件。回答以可核對的原文證據呈現；沒有充分證據就不作答。</p>
+<form action="/ask" method="post">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <label for="question">你的問題</label>
+  <textarea id="question" name="question" maxlength="1000" minlength="2" required placeholder="例如：每日出差補助是多少？">{{ question }}</textarea>
+  <button type="submit">查詢文件</button>
+</form>
+{% if result %}
+<section><h2>{{ "證據不足" if result.refused else "文件證據回答" }}</h2>
+<div class="content">{{ result.answer }}</div>
+{% for c in result.citations %}
+<p>[{{ loop.index }}] <a href="{{ c.url }}">{{ c.title }}</a> · 版本 {{ c.version_id }} · {{ "PDF 第" if c.location_kind == "page" else "TXT 第" }} {{ c.location_no }} {{ "頁" if c.location_kind == "page" else "段" }}</p>
+{% endfor %}
+<p class="muted">來源開啟時會再次確認權限。每次提問獨立處理，不保留聊天紀錄。</p></section>
+{% endif %}
+{% endblock %}

@@ -1,0 +1,9 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>我管理的文件</h1>
+<p>管理分享、新版本、封存與交接。封存文件仍保留資料，前台不再開放閱讀。</p>
+<table><thead><tr><th>文件</th><th>狀態</th></tr></thead><tbody>
+{% for d in documents %}<tr><td><a href="/manage/{{ d.id }}">{{ d.title }}</a></td><td>{{ "已封存" if d.status == "archived" else "使用中" }}</td></tr>
+{% else %}<tr><td colspan="2">目前沒有由你管理的文件。</td></tr>{% endfor %}
+</tbody></table>
+{% endblock %}

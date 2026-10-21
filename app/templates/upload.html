@@ -1,0 +1,13 @@
+{% extends "base.html" %}
+{% block content %}
+<h1>上傳文件</h1>
+<p>新文件預設只有你能閱讀。處理完成後，可在文件管理頁設定分享。</p>
+<p class="muted">支援單欄文字 PDF（最多 50 頁、10 MiB）與 UTF-8 TXT（最多 1 MiB）。掃描件、複雜表格及多欄文件請先轉為逐筆文字。文字上限 60,000 字元。</p>
+<form action="/upload" method="post" enctype="multipart/form-data">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <label for="title">文件名稱</label><input id="title" name="title" maxlength="180" required>
+  <label for="category">業務分類</label><input id="category" name="category" maxlength="80" value="一般文件" required>
+  <label for="file">PDF 或 TXT 檔案</label><input type="file" id="file" name="file" accept=".pdf,.txt" required>
+  <button type="submit">上傳並開始處理</button>
+</form>
+{% endblock %}

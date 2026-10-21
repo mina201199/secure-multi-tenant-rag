@@ -1,0 +1,12 @@
+{% extends "base.html" %}
+{% block content %}
+<p class="muted">公司知識文件平台</p>
+<h1>登入查看文件</h1>
+<p>使用公司提供的帳號登入，查看你有權閱讀的文件。</p>
+<form method="post" action="/login">
+  <input type="hidden" name="csrf_token" value="{{ csrf }}">
+  <label for="username">帳號</label><input id="username" name="username" autocomplete="username" maxlength="120" required>
+  <label for="password">密碼</label><input id="password" name="password" type="password" autocomplete="current-password" maxlength="1024" required>
+  <button type="submit">登入</button>
+</form>
+{% endblock %}
