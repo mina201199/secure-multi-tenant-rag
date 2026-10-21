@@ -198,3 +198,6 @@ install_sharing_routes(app, require_identity, optional_identity, public_identity
 
 from app.version_routes import install_routes as install_version_routes
 install_version_routes(app, require_identity, optional_identity, public_identity, TEMPLATES)
+
+from app.archive import install_routes as install_archive_routes
+install_archive_routes(app, require_identity, optional_identity, public_identity, TEMPLATES)
