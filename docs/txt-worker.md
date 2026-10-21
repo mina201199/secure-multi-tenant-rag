@@ -57,4 +57,4 @@ git diff --check
 
 `tests/test_worker.py` 使用真正 `rag_worker` 密碼連線；管理連線只建立虛構測試資料、模擬時間／停用／封存及觀察結果。涵蓋兩個 worker、兩個回收者、四種候選列鎖、舊 token、退避與上限、回滾、程序被 kill、SIGTERM、004 升級、私有發布及最低權限。測試在隔離 tmpfs PostgreSQL 執行，沒有對正式資料執行時間調整。
 
-本輪驗證結果與失敗紀錄見 [驗收紀錄](txt-worker-acceptance.md)。目前仍無 RLS／PDF 正式整合／chunks／embedding／RAG／付費呼叫；不能把 TXT worker 的測試當作完整 M3A 或多層資料隔離驗收。
+本輪驗證結果與失敗紀錄見 [驗收紀錄](txt-worker-acceptance.md)。後續本分支已接上 [受限 PDF 正式處理](pdf-processing.md)，共用本篇 worker 與恢復排程。目前仍無 RLS／chunks／embedding／RAG／付費呼叫；不能把 TXT worker 的測試當作完整 M3A 或多層資料隔離驗收。

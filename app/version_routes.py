@@ -1,4 +1,4 @@
-"""Bounded TXT upload routes; business writes stay in restricted version service."""
+"""Bounded TXT/PDF uploads; business writes stay in restricted version service."""
 import re
 import secrets
 from uuid import UUID
@@ -14,7 +14,8 @@ from app import security, version_service
 from app.db import get_db
 
 MAX_SOURCE_BYTES = 1024 * 1024
-MAX_REQUEST_BYTES = MAX_SOURCE_BYTES + 64 * 1024
+MAX_PDF_BYTES = 2 * 1024 * 1024
+MAX_REQUEST_BYTES = MAX_PDF_BYTES + 64 * 1024
 IDEMPOTENCY_KEY = re.compile(r'[A-Za-z0-9_-]{16,128}', re.ASCII)
 POSITIVE_BIGINT = re.compile(r'[1-9][0-9]{0,18}', re.ASCII)
 DocumentId = Annotated[int, Path(ge=1, le=9223372036854775807)]
@@ -23,7 +24,7 @@ UPLOAD_SCHEMA = {
         'type': 'object', 'additionalProperties': False,
         'required': ['file', 'expected_current_version_id', 'csrf_token'],
         'properties': {
-            'file': {'type': 'string', 'format': 'binary', 'description': 'UTF-8 TXT; 1 MiB / 200,000 Unicode characters maximum'},
+            'file': {'type': 'string', 'format': 'binary', 'description': 'UTF-8 TXT: 1 MiB; text PDF: 2 MiB / 20 pages; 200,000 characters maximum. PDF validation is asynchronous.'},
             'expected_current_version_id': {'type': 'integer', 'minimum': 1, 'maximum': 9223372036854775807},
             'csrf_token': {'type': 'string', 'maxLength': 200},
         },
@@ -53,7 +54,7 @@ def job_identifier(value):
 
 async def read_upload(request, *, html_form=False):
     if request.headers.get('content-type', '').split(';')[0].lower() != 'multipart/form-data':
-        raise HTTPException(422, '請使用 TXT 檔案上傳表單')
+        raise HTTPException(422, '請使用 TXT／PDF 檔案上傳表單')
     try:
         form = await MultiPartParser(request.headers, bounded_request_stream(request),
                                      max_files=1, max_fields=4, max_part_size=64 * 1024).parse()
@@ -80,19 +81,26 @@ async def read_upload(request, *, html_form=False):
         if (not isinstance(expected, str) or not POSITIVE_BIGINT.fullmatch(expected)
                 or int(expected) > 9223372036854775807):
             raise HTTPException(422, '請提供有效的目前版本')
-        if not isinstance(file, UploadFile) or not (file.filename or '').lower().endswith('.txt'):
-            raise HTTPException(422, '目前只接受 UTF-8 TXT 檔案')
-        source = await file.read(MAX_SOURCE_BYTES + 1)
-        if len(source) > MAX_SOURCE_BYTES:
-            raise HTTPException(413, 'TXT 檔案不可超過 1 MiB')
-        return int(expected), source, key
+        if not isinstance(file, UploadFile) or not (file.filename or '').lower().endswith(('.txt', '.pdf')):
+            raise HTTPException(422, '只接受 UTF-8 TXT 或文字型 PDF')
+        sourceFormat = 'pdf' if file.filename.lower().endswith('.pdf') else 'txt'
+        limit = MAX_PDF_BYTES if sourceFormat == 'pdf' else MAX_SOURCE_BYTES
+        source = await file.read(limit + 1)
+        if len(source) > limit:
+            raise HTTPException(413, 'PDF 最多 2 MiB；TXT 最多 1 MiB')
+        if (sourceFormat == 'pdf') != source.startswith(b'%PDF-'):
+            raise HTTPException(422, '檔案格式與副檔名不符')
+        return int(expected), source, key, sourceFormat
     finally:
         await form.close()
 
 
-def create_and_commit(connection, identity, document_id, expected, source, key):
+def create_and_commit(connection, identity, document_id, expected, source, key, source_format='txt'):
     # Keep database waits off the event loop and commit before exposing success.
-    result = version_service.create_version(connection, identity, document_id, expected, source, key)
+    if source_format == 'txt':
+        result = version_service.create_version(connection, identity, document_id, expected, source, key)
+    else:
+        result = version_service.create_version(connection, identity, document_id, expected, source, key, source_format)
     connection.commit()
     return result
 
@@ -102,8 +110,8 @@ def install_routes(app, require_identity, optional_identity, public_identity, te
     async def create(document_id: DocumentId, request: Request,
                      identity=Depends(require_identity), connection=Depends(get_db),
                      idempotency_key: str = Header(..., description='16–128 ASCII letters, digits, - or _')):
-        expected, source, key = await read_upload(request)
-        result = await run_in_threadpool(create_and_commit, connection, identity, document_id, expected, source, key)
+        expected, source, key, sourceFormat = await read_upload(request)
+        result = await run_in_threadpool(create_and_commit, connection, identity, document_id, expected, source, key, sourceFormat)
         return JSONResponse(result, status_code=202)
 
     @app.get('/api/jobs/{job_id}')
@@ -128,6 +136,6 @@ def install_routes(app, require_identity, optional_identity, public_identity, te
     @app.post('/documents/{document_id}/versions')
     async def submit(document_id: DocumentId, request: Request,
                      identity=Depends(require_identity), connection=Depends(get_db)):
-        expected, source, key = await read_upload(request, html_form=True)
-        result = await run_in_threadpool(create_and_commit, connection, identity, document_id, expected, source, key)
+        expected, source, key, sourceFormat = await read_upload(request, html_form=True)
+        result = await run_in_threadpool(create_and_commit, connection, identity, document_id, expected, source, key, sourceFormat)
         return RedirectResponse(f'/documents/{document_id}/versions?job_id={result["job_id"]}', status_code=303)

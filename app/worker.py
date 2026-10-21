@@ -1,4 +1,4 @@
-"""使用專用 DB 登入處理 TXT；無 web、owner 或外部模型憑證。"""
+"""使用專用 DB 登入處理 TXT／PDF；無 web、owner 或外部模型憑證。"""
 import argparse
 import os
 import signal
@@ -9,7 +9,7 @@ from psycopg.conninfo import conninfo_to_dict
 from fastapi import HTTPException
 from psycopg.rows import dict_row
 
-from app import version_service
+from app import version_service, pdf_parser
 
 
 def connectWorker(dsn):
@@ -45,7 +45,22 @@ def runOnce(connection, stopEvent=None):
   connection.commit()
   if job is None:
     return recovered is not None
-  version_service.complete_job(connection, job['job_id'], job['lease_token'])
+  if stopEvent is not None and stopEvent.is_set():
+    return True
+  if job.get('source_format', 'txt') == 'pdf':
+    try:
+      pages = pdf_parser.parsePdf(job['source_bytes'])
+    except pdf_parser.PdfProcessingError as error:
+      if stopEvent is not None and stopEvent.is_set():
+        return True
+      version_service.fail_pdf_job(connection, job['job_id'], job['lease_token'], error.code)
+    else:
+      # 停止訊號後不發布；已提交的租約會交給下一個 worker 恢復。
+      if stopEvent is not None and stopEvent.is_set():
+        return True
+      version_service.complete_pdf_job(connection, job['job_id'], job['lease_token'], job['source_sha256'], pages)
+  else:
+    version_service.complete_job(connection, job['job_id'], job['lease_token'])
   connection.commit()
   return True
 

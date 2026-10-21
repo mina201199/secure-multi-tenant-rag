@@ -362,7 +362,7 @@ def test_security_definer_roles_are_narrow_and_public_cannot_execute(admin_db):
         FROM pg_proc p JOIN pg_namespace n ON n.oid=p.pronamespace JOIN pg_roles r ON r.oid=p.proowner
         WHERE n.nspname='app_core' AND p.proname IN
         ('create_version','get_version_management','get_job','claim_version_job','complete_version_job','fail_version_job')""").fetchall()
-    assert len(rows) == 6
+    assert len(rows) == 7
     for _, definer, owner, settings, public_execute in rows:
         assert definer and owner == 'rag_version_writer'
         assert any(setting.startswith('search_path=') for setting in settings or [])

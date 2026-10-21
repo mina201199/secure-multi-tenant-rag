@@ -80,3 +80,7 @@ ReportLab Requires-Dist 指出 pillow>=9.0.0 與 charset-normalizer；未使用�
 - `python:3.12-slim`、`pgvector/pgvector:pg16` 是可變 container tag，OS packages、Python runtime、PostgreSQL、pgvector、基底 layer 與其原生函式庫不在 Python requirements lock 內。發佈前記錄 image digest 並產生 container inventory；不可把本表當完整容器授權清單。
 - 原有 parser 基礎測試用 ReportLab `MSung-Light` CID font reference 產生虛構 PDF；新增品質樣本則使用上節所述的嵌入 MSJhengHei／WQY 字型。CID reference 不等於 repository 擁有或可散佈實際字型；兩種測試證據應分開記錄。新增／嵌入字型、PDF 圖像與外部測試 corpus 時，要逐一保存來源、權利與授權；生成的文件也不能只憑生成器授權判定內容權利。
 - 此 repository 沒有新增 OCR、模型、tokenizer、embedding、外部資料集或商用 ReportLab 套件。日後採用須另列依賴與服務條款，不能沿用原型結論。
+
+## 正式 PDF 處理補充（2026-10-21）
+
+正式 runtime 新增 `pypdf==6.21.1`，lock 共 33 個 pin。已在新 test image 核對 `importlib.metadata`：版本 6.21.1、License-Expression 為 BSD-3-Clause、License-File 為 LICENSE；來源見 [PyPI 固定版本](https://pypi.org/project/pypdf/6.21.1/)。部署需保留套件 LICENSE。獨立原型仍固定 6.10.0，不匯入正式程式；ReportLab 未加入 runtime。正式測試以低階 PDF 物件生成虛構文字與 CMap，不提交文件或字型檔。

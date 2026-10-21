@@ -7,6 +7,7 @@ from uuid import UUID
 
 import psycopg
 from fastapi import HTTPException
+from psycopg.types.json import Jsonb
 
 
 def _call(connection, name, arguments=()):
@@ -21,7 +22,7 @@ def _call(connection, name, arguments=()):
         if status is None:
             raise
         messages = {404: '找不到文件', 409: '版本或工作狀態已變更',
-                    422: '請提供有效的 UTF-8 TXT 與請求欄位', 413: 'TXT 最多 1 MiB、200,000 字元'}
+                    422: '請提供有效的 TXT／PDF 與請求欄位', 413: '檔案或文字超過容量限制'}
         raise HTTPException(status, messages[status]) from None
     return row['result'] if isinstance(row, dict) else row[0]
 
@@ -31,9 +32,9 @@ def get_version_management(connection, identity, document_id):
                  (identity['tenant_id'], identity['id'], document_id))
 
 
-def create_version(connection, identity, document_id, expected_version_id, source_bytes, idempotency_key):
-    return _call(connection, 'create_version', (identity['tenant_id'], identity['id'],
-                 document_id, expected_version_id, source_bytes, idempotency_key))
+def create_version(connection, identity, document_id, expected_version_id, source_bytes, idempotency_key, source_format='txt'):
+    arguments = (identity['tenant_id'], identity['id'], document_id, expected_version_id, source_bytes, idempotency_key)
+    return _call(connection, 'create_version', arguments if source_format == 'txt' else arguments + (source_format,))
 
 
 def _uuid(value, status=409):
@@ -68,3 +69,12 @@ def fail_job(connection, job_id, lease_token):
 
 def recover_job(connection):
   return _call(connection, 'recover_version_job')
+
+
+def complete_pdf_job(connection, job_id, lease_token, source_sha256, pages):
+  return _call(connection, 'complete_pdf_version_job',
+    (_uuid(job_id), _uuid(lease_token), source_sha256, Jsonb(pages)))
+
+
+def fail_pdf_job(connection, job_id, lease_token, error):
+  return _call(connection, 'fail_pdf_version_job', (_uuid(job_id), _uuid(lease_token), error))
