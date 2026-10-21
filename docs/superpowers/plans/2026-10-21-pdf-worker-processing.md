@@ -56,7 +56,7 @@ Files: app/version_service.py, app/worker.py, tests/test_pdf_worker.py, docs/pdf
 - [x] Run isolated parser tests, then serialized real PostgreSQL suite, offline CI tool/parser tests, fresh migration/upgrade tests and real process smoke. Retain RED/failure/fix records.
 - [x] Independent review across parser containment and transactional integration; resolve actionable findings, rerun affected tests and complete regression.
 - [x] Update docs with concrete limits/unsupported layouts, commands/results and remaining scope.
-- [ ] Commit/push branch, create and attach PR against main, inspect CI.
+- [x] Commit/push branch, create and attach PR against main, inspect CI.
 
 ## Execution record
 
@@ -68,3 +68,5 @@ Files: app/version_service.py, app/worker.py, tests/test_pdf_worker.py, docs/pdf
 - Fresh test-db plus rebuilt runtime/test images: 366 passed; after final text-operation fixes mounted source full regression: 369 passed, 120 subtests; existing Starlette warning only. Parser 40 cases included in final full suite; readiness/CI tool tests 12 OK. Offline prototype requires its separate dependencies and will run in PR CI.
 
 - Follow-up review confirmed all reported parser fixes by inspection; raw text objects reject merged shows and nonzero TJ adjustment. Three additional RED/green regressions retained.
+
+- Created and attached [PR #76](https://github.com/mina201199/secure-multi-tenant-rag/pull/76). Remote offline CI passed; latest PostgreSQL/worker and offline check results are tracked on the PR.

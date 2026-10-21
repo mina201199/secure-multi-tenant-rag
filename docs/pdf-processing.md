@@ -47,7 +47,7 @@ DB 發布能力重新驗證租約、擁有者、帳號、封存狀態、基礎�
 
 ## 驗收紀錄
 
-2026-10-21：完整 PostgreSQL／HTTP／worker／parser／題庫回歸 **369 passed、120 subtests passed**；僅既有 Starlette HTTPX deprecation warning。離線 readiness／CI runner 工具 **12 tests OK**。獨立原型需其專用 pypdf／ReportLab 環境，本機一般 Python 未安裝 ReportLab；PR 的 offline CI 負責獨立原型驗證。
+2026-10-21：完整 PostgreSQL／HTTP／worker／parser／題庫回歸 **369 passed、120 subtests passed**；僅既有 Starlette HTTPX deprecation warning。離線 readiness／CI runner 工具 **12 tests OK**。獨立原型需其專用 pypdf／ReportLab 環境，本機一般 Python 未安裝 ReportLab；[PR #76](https://github.com/mina201199/secure-multi-tenant-rag/pull/76) 的 offline CI 已通過獨立原型驗證，最新 commit 的完整 CI 狀態以 PR checks 為準。
 
 新增 116 項案例涵蓋實際中文／數值／頁次抽取、錯誤 PDF、CPU／記憶體／wall／輸出限制、無憑證與網路繼承、資料庫能力與升級、原子發布、舊權限撤回、跨公司／CSRF、失聯恢復與停止後不發布。測試全部使用虛構內容。
 
