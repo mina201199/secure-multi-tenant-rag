@@ -15,7 +15,7 @@
 - [x] 2. DB／service：新增 migration 009 與 transfer_service，實作 spec 的四個公開能力與修訂 trigger，執行 DB 專項測試。新表只有 NOLOGIN 能力角色可操作，web 只可 EXECUTE，worker 無交接能力。
 - [x] 3. API／HTML：新增 transfer_routes、兩份模板，接上 main 與 base 導覽。對建立、決策、列表、CSRF／Origin、escaping、有限資訊補 HTTP 測試，確認 commit 前不交付成功。
 - [x] 4. 複核整合：完整 481 項與 120 子測試、工具 12 項通過；獨立安全審查與測試生命週期修正複核完成。失敗與重測紀錄見 `docs/document-transfers.md`。
-- [ ] 5. 文件與 PR：新增操作驗收文件並同步 README、決策稿；記錄實測結果、限制與部署 migration。git diff --check，提交並推送 codex/document-transfers，建立 PR Closes #21/#22/#23、Related #25/#26/#27，附加至對話。
+- [x] 5. 文件與 PR：操作驗收、README 與決策稿已同步；`e5fbaa1` 已推送至 codex/document-transfers，建立並附加 [PR #79](https://github.com/mina201199/secure-multi-tenant-rag/pull/79)，Closes #21/#22/#23、Related #25/#26/#27。遠端 CI 結果見 PR checks。
 
 ## 決策紀錄
 
