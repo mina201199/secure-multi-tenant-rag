@@ -1,0 +1,3 @@
+# Spike-only dependencies; deliberately separate from production requirements.
+pypdf==6.10.0
+reportlab==4.4.9

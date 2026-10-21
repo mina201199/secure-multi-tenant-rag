@@ -1,0 +1,88 @@
+{
+  "schema_version": 1,
+  "gold_provenance": "Independently authored fictional source facts and source locations. Never regenerated from parser output. No human quality signoff has occurred.",
+  "cases": [
+    {
+      "id": "txt_utf8", "filename": "fictional-parts-utf8.txt", "layout": "basic",
+      "expected_classification": "supported_basic", "review_required": true,
+      "facts": [
+        {"locator": "paragraph:1", "source_location": "first paragraph, full item record", "text": "料號 A-1001｜規格 M8x30｜數量 12｜單位 支"},
+        {"locator": "paragraph:2", "source_location": "second paragraph, neighboring item differs in spec, number and unit", "text": "料號 A-1002｜規格 M8x35｜數量 21｜單位 盒"}
+      ],
+      "limitations": [], "human_review": {"reviewer": null, "reviewed_at": null, "decision": null}
+    },
+    {
+      "id": "txt_bom_crlf", "filename": "fictional-parts-bom-crlf.txt", "layout": "basic",
+      "expected_classification": "supported_basic", "review_required": true,
+      "facts": [
+        {"locator": "paragraph:1", "source_location": "UTF-8 BOM, two leading spaces, first CRLF paragraph", "text": "料號 A-1001｜規格 M8x30｜數量 12｜單位 支"},
+        {"locator": "paragraph:2", "source_location": "second CRLF paragraph", "text": "料號 A-1002｜規格 M8x35｜數量 21｜單位 盒"}
+      ],
+      "limitations": [], "human_review": {"reviewer": null, "reviewed_at": null, "decision": null}
+    },
+    {
+      "id": "pdf_basic", "filename": "fictional-basic.pdf", "layout": "basic",
+      "expected_classification": "supported_basic", "review_required": true,
+      "facts": [
+        {"locator": "page:1", "source_location": "physical page 1, x35 y770, single text line", "text": "料號 A-1001｜規格 M8x30｜數量 12｜單位 支"},
+        {"locator": "page:2", "source_location": "physical page 2, x35 y770, single text line", "text": "料號 A-1002｜規格 M8x35｜數量 21｜單位 盒"}
+      ],
+      "limitations": [], "human_review": {"reviewer": null, "reviewed_at": null, "decision": null}
+    },
+    {
+      "id": "pdf_columns", "filename": "fictional-columns.pdf", "layout": "multi_column",
+      "expected_classification": "needs_manual_quality_review", "review_required": true,
+      "facts": [
+        {"locator": "page:1", "source_location": "left column x35, heading y770 and details y745 belong together", "text": "甲欄：料號 A-1001\n規格 M8x30｜數量 12｜單位 支"},
+        {"locator": "page:1", "source_location": "right column x315, heading y770 and details y745 belong together", "text": "乙欄：料號 A-1002\n規格 M8x35｜數量 21｜單位 盒"}
+      ],
+      "limitations": ["Plain extraction does not establish visual column reading order or column-to-detail links."],
+      "human_review": {"reviewer": null, "reviewed_at": null, "decision": null}
+    },
+    {
+      "id": "pdf_table", "filename": "fictional-table.pdf", "layout": "table",
+      "expected_classification": "needs_manual_quality_review", "review_required": true,
+      "facts": [
+        {"locator": "page:1", "source_location": "table row 1, y730: item x45, spec x190, quantity x310, unit x410", "text": "料號 A-1001｜規格 M8x30｜數量 12｜單位 支"},
+        {"locator": "page:1", "source_location": "table row 2, y700: item x45, spec x190, quantity x310, unit x410", "text": "料號 A-1002｜規格 M8x35｜數量 21｜單位 盒"}
+      ],
+      "limitations": ["Gold expresses visual row associations. Plain text has no table-cell coordinates; presence of all tokens cannot prove correct rows."],
+      "human_review": {"reviewer": null, "reviewed_at": null, "decision": null}
+    },
+    {
+      "id": "pdf_cross_page", "filename": "fictional-continuation.pdf", "layout": "page_spanning_relation",
+      "expected_classification": "needs_manual_quality_review", "review_required": true,
+      "facts": [
+        {"locator": "page:1", "source_location": "page 1 x35 y770: item and specification", "text": "料號 A-1001｜規格 M8x30"},
+        {"locator": "page:2", "source_location": "page 2 x35 y770: continuation references page 1 item", "text": "承前頁 A-1001：數量 12｜單位 支"},
+        {"locator": "page:2", "source_location": "page 2 x35 y745: neighboring item must not receive previous item's quantity/unit", "text": "料號 A-1002｜規格 M8x35｜數量 21｜單位 盒"}
+      ],
+      "limitations": ["Page-local fact checks cannot establish cross-page relational reconstruction; manual source comparison required even if every local fact survives."],
+      "human_review": {"reviewer": null, "reviewed_at": null, "decision": null}
+    },
+    {
+      "id": "pdf_malformed", "filename": "fictional-malformed.pdf", "layout": "invalid",
+      "expected_classification": "rejected", "expected_error": "invalid_pdf", "review_required": true,
+      "facts": [], "limitations": ["Malformed PDF is not a recoverable text source."],
+      "human_review": {"reviewer": null, "reviewed_at": null, "decision": null}
+    },
+    {
+      "id": "pdf_no_text", "filename": "fictional-graphic-only.pdf", "layout": "no_text",
+      "expected_classification": "rejected", "expected_error": "unreadable_page", "review_required": true,
+      "facts": [], "limitations": ["Graphic-only page has no text layer; OCR is outside this spike."],
+      "human_review": {"reviewer": null, "reviewed_at": null, "decision": null}
+    },
+    {
+      "id": "pdf_mixed_blank", "filename": "fictional-text-and-blank.pdf", "layout": "partial_text",
+      "expected_classification": "rejected", "expected_error": "unreadable_page", "review_required": true,
+      "facts": [], "limitations": ["One unreadable physical page rejects the whole document; partial page success is insufficient."],
+      "human_review": {"reviewer": null, "reviewed_at": null, "decision": null}
+    },
+    {
+      "id": "txt_invalid_utf8", "filename": "fictional-invalid-encoding.txt", "layout": "invalid",
+      "expected_classification": "rejected", "expected_error": "invalid_utf8", "review_required": true,
+      "facts": [], "limitations": ["No lossy decoding or guessed legacy encoding."],
+      "human_review": {"reviewer": null, "reviewed_at": null, "decision": null}
+    }
+  ]
+}

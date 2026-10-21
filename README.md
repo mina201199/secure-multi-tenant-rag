@@ -37,7 +37,7 @@
 | `app/db.py` | 改用 psycopg 連線池，一個 request 一個交易 | M2 加 RLS 時只用 `SET LOCAL` |
 | `app/security.py` | 已接上登入、登出、Session、CSRF、Origin / Referer 檢查與限流 | 審查並補充惡意案例 |
 | `app/repository.py` | 有效版本閱讀、版本擁有者分享與 ACL 原子替換已建立 | 新版建立 / 切換 API 與 RLS 尚未實作 |
-| API / HTML 頁面 | 已有登入、文件清單 / 內容與分享 / 撤權頁面 | 補 HTML 錯誤頁與後續功能頁面 |
+| API / HTML 頁面 | 已有登入、文件清單 / 內容、分享 / 撤權與安全錯誤頁 | 補後續功能頁面 |
 | 初始化 / 測試帳號 | `app/bootstrap.py`、`app/migrations/`、兩家公司 seed 已建立 | 見「測試帳號」 |
 | 自動化測試 | 已加入分享、最低權限與題庫完整性測試；結果見 [整合紀錄](docs/parallel-integration.md) | 新功能同步補正反案例 |
 | 白話教學 | 已補 [M1](docs/m1-onboarding.md)、[M2-01](docs/m2-versions.md) 與 [M2-02](docs/m2-sharing.md) | 後續階段持續補齊 |
@@ -48,6 +48,10 @@
 目前接手順序：驗收本分支 M2-01 / M2-02 → 新版建立與切換 → 封存、歷史、交接與 RLS。最後才接付費模型。M1、M2-01 及 M2-02 任務勾選與 Issue 關閉保留到 PR 驗收。
 
 本輪四條工作線已整合：分享 / 撤權 API 與頁面見 [M2-02 教學](docs/m2-sharing.md)；[RLS 設計](docs/m2-rls-design.md) 已記錄政策與未來驗收契約，但尚未啟用 RLS；[30 題核心題庫](evals/README.md) 使用獨立虛構來源，尚待人工審核與實際 RAG 評估。驗證結果與限制見 [整合紀錄](docs/parallel-integration.md)。
+
+後續審查與準備見 [本輪成果及並行待辦](docs/next-parallel-work.md)：已完成獨立 AI PR／題庫複核、30 題人工審核表、獨立 PDF／TXT 原型及 RLS 實作計畫。人工簽核仍待完成；原型未接正式流程，RLS metadata audit 為 NOT_READY，不能視為 M3A 或 RLS 驗收通過。
+
+最新後續交付見 [五項並行工作驗證](docs/parallel-followup-results.md)：新增 CI workflow（遠端尚未執行）、安全 HTML 錯誤頁、[新版寫入契約草案](docs/m2-version-write-contract.md)、[32 個 pin 的授權盤點](docs/dependency-licenses.md) 與 [10 個解析品質樣本](docs/parsing-quality.md)。完整回歸 112 項及 120 子測試通過；原型／品質 26 項另在 Windows 與 Linux 驗證。這些成果不代表已實作新版寫 API、RLS 或正式檔案處理。
 
 ## 目標與第一版範圍
 
@@ -124,7 +128,7 @@ flowchart TD
 | 回答 | 決策採 `gpt-5.4-mini` | 尚未整合 SDK / API |
 | 解析 / tokenizer | 必須保留來源位置與 token 計數 | 具體套件尚待選定 |
 | 背景工作 | 持久化工作、可重試、可恢復、可信 tenant 情境 | 機制與 worker 尚待實作 |
-| 測試 | pytest + HTTPX；真實 PostgreSQL | 56 項通過；RLS 測試待實作 |
+| 測試 | pytest + HTTPX；真實 PostgreSQL | 112 項與 120 子測試通過；RLS 行為測試待實作 |
 | 本機編排 | Docker Compose；web 綁定 `127.0.0.1:8008` | 建置、初始化、啟動與 test profile 已實際執行 |
 
 版本範圍見 [requirements.txt](requirements.txt) 與 [requirements-dev.txt](requirements-dev.txt)，已通過測試的確切版本見 [requirements.lock](requirements.lock)。沒有既定 React、LangChain、LangGraph、Redis 或 Celery 依賴；如需新增，先說明必要性並更新架構決策。Hybrid、Reranker、第二個 Embedding 模型在對應實驗前選定與記錄。
@@ -161,9 +165,9 @@ flowchart TD
 已知缺口：
 
 - 尚無 RLS；隔離目前只靠 API 層 SQL 條件與資料庫複合外鍵。
-- HTML 頁面的 404 / 401 錯誤目前直接顯示 JSON，尚無錯誤頁。
+- HTML 頁面已有 401 / 403 / 404 / 409 與通用 422 錯誤頁，API 與基礎設施路徑保留 JSON；登入頁維持既有錯誤流程。
 - migration 是自製的「依檔名套用 SQL」機制，尚未選定正式 migration 工具。
-- 尚無 LICENSE 與 CI；完整 M2 教學將隨後續功能補齊。
+- 尚無專案 LICENSE；CI workflow 與本機等效驗證已建立，遠端 Actions 結果以交付 PR 對應 commit 的 checks 為準；完整 M2 教學將隨後續功能補齊。
 
 建議後續按責任拆分 `routers/`、`services/`、`templates/`、`workers/`、資料庫遷移、`tests/`、`evals/` 與教學文件；這些都是待新增的模組，不是現有目錄。
 

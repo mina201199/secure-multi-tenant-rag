@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ status }} {{ error_title }}｜知序 Atlas{% endblock %}
+{% block public_content %}
+<link rel="stylesheet" href="/static/errors.css?v=1">
+<main class="error-layout" aria-labelledby="error-title">
+  <a class="brand" href="/documents"><span class="brand-mark">{{ icon('layers') }}</span><strong>知序<span>atlas</span></strong></a>
+  <section class="error-card">
+    <span class="error-symbol" aria-hidden="true">{{ icon('shield') }}</span>
+    <p class="error-code">{{ status }}</p>
+    <h1 id="error-title">{{ error_title }}</h1>
+    <p class="error-description">{{ error_message }}</p>
+    <div class="error-actions">
+      <a class="button primary" href="/documents">回到文件知識庫 {{ icon('arrow') }}</a>
+      <a class="button" href="/login">重新登入</a>
+    </div>
+    <p class="error-note">文件的可見範圍依目前帳號的閱讀權限決定。</p>
+  </section>
+</main>
+{% endblock %}
