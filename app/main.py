@@ -181,3 +181,7 @@ def document_page(
         "me": public_identity(identity, request),
         "document": document,
     })
+
+
+from app.sharing import install_routes as install_sharing_routes
+install_sharing_routes(app, require_identity, optional_identity, public_identity, TEMPLATES)

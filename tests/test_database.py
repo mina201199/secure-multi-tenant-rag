@@ -15,6 +15,8 @@ def test_runtime_role_has_no_bypass_privileges(runtime_db):
 @pytest.mark.parametrize("statement", [
     "INSERT INTO app_core.documents (tenant_id, title, category, owner_id) VALUES (1, 'x', 'x', 1)",
     "UPDATE app_core.users SET role = 'admin'",
+    "UPDATE app_core.users SET is_active = false",
+    "UPDATE app_core.documents SET current_version_id = NULL",
     "UPDATE app_core.version_readers SET user_id = user_id",
     "UPDATE app_core.document_versions SET content = 'tampered'",
     "CREATE TABLE app_core.runtime_should_not_create (id int)",

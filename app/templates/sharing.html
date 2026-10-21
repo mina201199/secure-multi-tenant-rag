@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+{% block title %}分享設定｜{{ document.title }}{% endblock %}
+{% block content %}
+<a class="back-link" href="/documents/{{ document.id }}">返回文件</a>
+<div class="page-heading"><div><div class="eyebrow">SHARING</div><h1>分享設定</h1><p>{{ document.title }} · 第 {{ document.version_number }} 版</p></div></div>
+<section class="paper">
+{% if saved %}<p role="status">分享設定已儲存。撤權從下一次請求生效。</p>{% endif %}
+<p>只有目前有效版本的擁有者可以設定分享；管理員與主管沒有額外文件權限。</p>
+<form method="post" action="/documents/{{ document.id }}/sharing">
+<input type="hidden" name="csrf_token" value="{{ me.csrf_token }}">
+<input type="hidden" name="version_id" value="{{ document.version_id }}">
+<fieldset><legend>閱讀範圍</legend>
+<label><input type="radio" name="mode" value="private" {% if mode == 'private' %}checked{% endif %}>私人（只有擁有者）</label><br>
+<label><input type="radio" name="mode" value="company" {% if mode == 'company' %}checked{% endif %}>本公司所有有效帳號</label><br>
+<label><input type="radio" name="mode" value="specified" {% if mode == 'specified' %}checked{% endif %}>指定本公司有效帳號</label>
+</fieldset>
+<fieldset id="sharing-readers"><legend>指定閱讀者</legend>
+<p>指定模式至少選取一位。私人或本公司模式會清除原有指定名單。</p>
+{% for candidate in candidates %}<label><input type="checkbox" name="reader_ids" value="{{ candidate.id }}" {% if candidate.id in reader_ids %}checked{% endif %}>{{ candidate.display_name }}（{{ candidate.username }}）</label><br>{% endfor %}
+</fieldset>
+<button class="button primary" type="submit">儲存分享設定</button>
+</form>
+</section>
+<script>
+const sharingForm = document.querySelector('form[action$="/sharing"]');
+sharingForm.addEventListener('submit', () => {
+  if (sharingForm.elements.mode.value !== 'specified') {
+    sharingForm.querySelectorAll('[name="reader_ids"]').forEach(input => input.disabled = true);
+  }
+});
+</script>
+{% endblock %}
