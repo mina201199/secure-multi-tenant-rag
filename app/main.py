@@ -204,3 +204,6 @@ install_archive_routes(app, require_identity, optional_identity, public_identity
 
 from app.history_routes import install_routes as install_history_routes
 install_history_routes(app, require_identity, optional_identity, public_identity, TEMPLATES)
+
+from app.transfer_routes import install_routes as install_transfer_routes
+install_transfer_routes(app, require_identity, optional_identity, public_identity, TEMPLATES)

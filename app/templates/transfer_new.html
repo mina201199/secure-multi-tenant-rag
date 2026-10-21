@@ -1,0 +1,22 @@
+{% extends "base.html" %}
+{% block title %}提出交接｜知序 Atlas{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow">DOCUMENT TRANSFER</div><h1>提出交接</h1><p>{{ options.title }}</p></div><a class="button secondary" href="/transfers">交接紀錄</a></div>
+<div class="inline-note">由直屬主管審核，7 天內有效。檔案與勾選版本會一起移轉管理權，原有閱讀授權保持不變；未勾選的歷史版本不移轉。</div>
+<section class="paper">
+<form method="post" action="/documents/{{ options.document_id }}/transfer">
+  <input type="hidden" name="csrf_token" value="{{ me.csrf_token }}">
+  <input type="hidden" name="expected_version_id" value="{{ options.current_version_id }}">
+  <fieldset><legend>交接版本範圍</legend>
+    {% for version in options.versions %}
+    {% if version.version_id == options.current_version_id %}
+    <input type="hidden" name="version_ids" value="{{ version.version_id }}"><p>第 {{ version.version_number }} 版（目前版本，必須移轉）</p>
+    {% else %}<label><input type="checkbox" name="version_ids" value="{{ version.version_id }}">第 {{ version.version_number }} 版（歷史版本）</label>{% endif %}
+    {% endfor %}
+  </fieldset>
+  <p><label for="recipient">接收人</label><select id="recipient" name="recipient_id" required><option value="">請選擇同公司有效帳號</option>{% for person in options.recipients %}<option value="{{ person.id }}">{{ person.display_name }}（{{ person.username }}）</option>{% endfor %}</select></p>
+  <p><label for="reason">交接原因</label><textarea id="reason" name="reason" maxlength="500" rows="3" required aria-describedby="reason-help"></textarea><small id="reason-help">主管會看到此原因，請勿填寫檔名或機密內容。</small></p>
+  <button class="button primary" type="submit">送交主管審核</button>
+</form>
+</section>
+{% endblock %}
