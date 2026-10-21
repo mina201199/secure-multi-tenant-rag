@@ -1,0 +1,20 @@
+{% extends "base.html" %}
+{% block title %}檔案交接｜知序 Atlas{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow">DOCUMENT TRANSFERS</div><h1>檔案交接</h1><p>自己的申請紀錄與目前由你負責的待審案件。</p></div></div>
+<div class="inline-note">擁有者可從檔案的「版本管理」提出交接。主管只取得審核必要資訊；核准時會重新確認帳號、擁有者與版本，任一項失效就不移轉。</div>
+<section class="paper">
+{% if transfers %}
+{% set statusNames = {'pending': '待審核', 'approved': '已核准', 'rejected': '已拒絕'} %}
+<div class="table-scroll"><table class="document-table"><thead><tr><th>申請</th><th>提出人／接收人</th><th>原因</th><th>狀態與期限</th><th>操作</th></tr></thead><tbody>
+{% for transfer in transfers %}<tr>
+<td>#{{ transfer.request_id }}{% if transfer.document_id is defined %}<p>檔案編號 {{ transfer.document_id }}<br>版本 ID：{{ transfer.version_ids | join('、') }}</p>{% endif %}</td>
+<td>{{ transfer.requester_username }} → {{ transfer.recipient_username }}</td><td>{{ transfer.reason }}</td>
+<td>{{ statusNames.get(transfer.status, transfer.status) }}<br><small>{{ transfer.expires_at }}</small></td>
+<td>{% if transfer.can_decide %}<form method="post" action="/transfers/{{ transfer.request_id }}/decision"><input type="hidden" name="csrf_token" value="{{ me.csrf_token }}"><button class="button primary" type="submit" name="action" value="approve">核准交接</button><button class="button secondary" type="submit" name="action" value="reject">拒絕交接</button></form>{% else %}—{% endif %}</td>
+</tr>{% endfor %}
+</tbody></table></div>
+{% if transfers|length == 100 %}<a class="button secondary" href="/transfers?after_id={{ transfers[-1].request_id }}">下一頁</a>{% endif %}
+{% else %}<p>目前沒有交接案件。</p>{% endif %}
+</section>
+{% endblock %}
