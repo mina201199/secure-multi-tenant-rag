@@ -28,7 +28,7 @@ def list_documents(connection, identity):
 
 def get_document(connection, identity, document_id):
     return connection.execute(
-        SUMMARY_COLUMNS + ", v.content" + VISIBLE_DOCUMENTS + " AND d.id = %(document_id)s",
+        SUMMARY_COLUMNS + ", v.content, v.source_pages, v.parser_version" + VISIBLE_DOCUMENTS + " AND d.id = %(document_id)s",
         {"tenant_id": identity["tenant_id"], "user_id": identity["id"], "document_id": document_id},
     ).fetchone()
 

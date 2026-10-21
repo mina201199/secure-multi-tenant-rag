@@ -7,14 +7,15 @@
 {% if job %}<div role="status"><p>工作狀態：{{ job.status }} · 版本識別：{{ job.version_id }}</p>{% if job.error_code %}<p>處理結果代碼：{{ job.error_code }}</p>{% endif %}<p><a href="/documents/{{ document.id }}/versions?job_id={{ job.job_id }}">重新整理工作狀態</a></p></div>{% endif %}
 <p>上傳後建立排隊工作（queued）。背景處理服務啟動時會自動處理；請重新整理查看狀態。新版成功前，舊有效版本會持續提供閱讀。</p>
 <p>處理中斷時系統會在租約到期後有限重試；若權限失效或重試耗盡，工作會失敗並保留舊有效版本。</p>
-<p>只接受 UTF-8 或 UTF-8 BOM 的 .txt 檔案，最多 1 MiB、200,000 個 Unicode 字元；不可為空白或包含二進位控制字元。</p>
+<p>TXT：UTF-8 或 UTF-8 BOM，最多 1 MiB。PDF：黑色文字型單欄文件，最多 2 MiB、20 頁。兩種格式均最多 200,000 個 Unicode 字元。</p>
+<p>PDF 會保留實際檔案頁次；掃描、加密、圖片、表格、多欄、旋轉、文字重疊／超出頁面或無法確認閱讀順序的版面不支援。請以文字型單欄 PDF 或 TXT 重新上傳；解析失敗不會取代舊版。</p>
 <p>新版預設私人，不會繼承舊版分享。完成內部處理並發布後，只有新版擁有者可管理該版分享。</p>
 <form method="post" enctype="multipart/form-data" action="/documents/{{ document.id }}/versions">
 <input type="hidden" name="csrf_token" value="{{ me.csrf_token }}">
 <input type="hidden" name="expected_current_version_id" value="{{ document.current_version_id }}">
 <input type="hidden" name="idempotency_key" value="{{ idempotency_key }}">
-<p><label for="version-source">新版 TXT 檔案</label><br><input id="version-source" type="file" name="file" accept=".txt,text/plain" required></p>
-<button class="button primary" type="submit">上傳 TXT 並建立排隊工作</button>
+<p><label for="version-source">新版 TXT／PDF 檔案</label><br><input id="version-source" type="file" name="file" accept=".txt,.pdf,text/plain,application/pdf" required></p>
+<button class="button primary" type="submit">上傳並建立排隊工作</button>
 </form>
 </section>
 {% endblock %}

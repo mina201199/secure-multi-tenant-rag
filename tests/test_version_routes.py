@@ -94,7 +94,7 @@ def test_api_rejects_client_controlled_or_unknown_fields(client, version_documen
 
 
 @pytest.mark.parametrize('source,filename,status', [
-    (b'%PDF-1.7 bad', 'file.pdf', 422), (b'\xff\xfe', 'file.txt', 422),
+    (b'not a PDF', 'file.pdf', 422), (b'\xff\xfe', 'file.txt', 422),
     (b'a\x00b', 'file.txt', 422), (b'\t \n', 'file.txt', 422),
     (b'x' * (1024 * 1024 + 1), 'file.txt', 413),
     ('字' * 200001, 'file.txt', 413),
@@ -210,7 +210,7 @@ def test_parser_stops_receiving_at_aggregate_limit_even_without_trusted_length(c
     # An ASGI receive probe proves the app stops consuming the request, unlike
     # TestClient which can combine its complete content iterator into one chunk.
     prefix = b'--bounded\r\nContent-Disposition: form-data; name="file"; filename="test.txt"\r\n\r\n'
-    body = prefix + b'x' * (2 * 1024 * 1024) + b'\r\n--bounded--\r\n'
+    body = prefix + b'x' * (3 * 1024 * 1024) + b'\r\n--bounded--\r\n'
     consumed = 0
     headers = [(b'content-type', b'multipart/form-data; boundary=bounded')]
     if content_length is not None:
@@ -226,7 +226,7 @@ def test_parser_stops_receiving_at_aggregate_limit_even_without_trusted_length(c
     with pytest.raises(HTTPException) as error:
         asyncio.run(read_upload(request))
     assert error.value.status_code == 413
-    assert consumed <= 1024 * 1024 + 64 * 1024 + 8192
+    assert consumed <= 2 * 1024 * 1024 + 64 * 1024 + 8192
     assert consumed < len(body)
 
 def test_capacity_error_uses_safe_html_for_browser_and_json_for_api(client, version_document):
