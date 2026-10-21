@@ -1,7 +1,7 @@
 """Thin calls to the database's restricted, transactional TXT capabilities.
 
 The caller commits successful writes, including a processor result of ``failed``.
-Neither this module nor the web process runs a background worker.
+The separate app.worker process consumes these capabilities; web never publishes.
 """
 from uuid import UUID
 
@@ -64,3 +64,7 @@ def complete_job(connection, job_id, lease_token):
 
 def fail_job(connection, job_id, lease_token):
     return _call(connection, 'fail_version_job', (_uuid(job_id), _uuid(lease_token)))
+
+
+def recover_job(connection):
+  return _call(connection, 'recover_version_job')

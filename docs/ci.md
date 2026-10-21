@@ -5,14 +5,14 @@
 ## 執行範圍
 
 - 所有 branch push、所有 PR 的 opened / synchronize / reopened，以及手動 workflow_dispatch。PR 不設 base branch filter，因此堆疊 PR 指向 `codex/*` 時也會執行。PR 預設測試 GitHub 產生的 merge ref；push 測試該 push 的 commit。
-- `postgres`：Ubuntu 24.04 的 Docker Compose，依 Dockerfile 的 lock constraints 建置 runtime / test image，`setup` 完成後啟動 web、等候 healthcheck 並檢查 HTTP `/health`，再用真實 PostgreSQL 執行整個 `tests/` 與 `evals/tests/`。
+- `postgres`：Ubuntu 24.04 的 Docker Compose，依 Dockerfile 的 lock constraints 建置 runtime / test image，`setup` 完成後啟動 web、等候 healthcheck 並檢查 HTTP `/health`，再用真實 PostgreSQL 執行整個 `tests/` 與 `evals/tests/`；最後以 worker profile 執行 `python -m app.worker --once`，檢查獨立受限登入與處理入口。
 - `offline`：獨立 venv 安裝 `prototypes/parsing/requirements.txt` 的 pypdf / reportlab pins，執行 parser、品質樣本、readiness-tool 與 CI 輸出清理測試。另以 apt 安裝 `fonts-wqy-microhei`，設定 `PARSING_QUALITY_CJK_FONT=/usr/share/fonts/truetype/wqy/wqy-microhei.ttc`，並明確檢查檔案存在。不啟動 DB，也不呼叫模型或付費 API。預設執行；手動執行可取消 `run_offline`。這是額外的原型證據，不能替代 PostgreSQL job 或 RLS 驗收。Linux font path 參照 [Debian 官方檔案清單](https://packages.debian.org/bookworm/all/fonts-wqy-microhei/filelist)，Ubuntu runner 的實際安裝／字型處理仍待第一個遠端 run 確認。
 
 應用程式測試使用 session bootstrap 與共享 seed / DB 狀態；**保持單一 serial pytest invocation，不加 xdist、不做資料庫測試 matrix 或 shard**。新增的 HTML 測試會由 `tests/` 自動收錄，不固定宣稱永遠只有 95 項。
 
 ## 憑證、隔離與清理
 
-使用 `pull_request`，不使用 `pull_request_target`。workflow 僅授予 `contents: read`，checkout 不保留 Git credentials；不需要設定任何 repository secret、外部服務 token 或正式資料。每個 PostgreSQL job 產生六個不同的 64 字元隨機十六進位 fixture 值，先以 GitHub `add-mask` 註冊，再以 0600 `.env` 寫入。它們只用在當次虛構 seed 與容器，不得把本機 `.env` 上傳。
+使用 `pull_request`，不使用 `pull_request_target`。workflow 僅授予 `contents: read`，checkout 不保留 Git credentials；不需要設定任何 repository secret、外部服務 token 或正式資料。每個 PostgreSQL job 產生八個不同的 64 字元隨機十六進位 fixture 值（含獨立 worker／test-worker 密碼），先以 GitHub `add-mask` 註冊，再以 0600 `.env` 寫入。它們只用在當次虛構 seed 與容器，不得把本機 `.env` 上傳。
 
 Compose project 使用 `ci-<run_id>-<run_attempt>`，隔離 network / volumes；各 job 使用新的 hosted runner。本機 compose 的固定 image tag / 8008 port 不適合多個 job 共用同一台長期 runner，因此此設定**限 GitHub-hosted runner**。不以共享 self-hosted runner 執行不可信 PR。
 

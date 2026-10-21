@@ -1,6 +1,6 @@
 # M2 TXT 新版建立與工作狀態
 
-本切片開放既有、有效版本 ready 文件的 TXT 新版建立。來源與新版本、工作保存在同一 PostgreSQL 交易，成功回應前明確 commit。這不代表 PDF、背景 worker、重試 API、向量搜尋或 RLS 已完成；目前一般使用者上傳後會停在 queued，沒有自動處理或公開發布端點。
+本切片開放既有、有效版本 ready 文件的 TXT 新版建立。來源與新版本、工作保存在同一 PostgreSQL 交易，成功回應前明確 commit。2026-10-21 已接上選用的 [TXT worker 與失聯恢復](txt-worker.md)：啟動 worker profile 後自動處理；未啟動時工作保持 queued。仍沒有 PDF 正式整合、人工重試 API、公開發布端點、向量搜尋或 RLS。下方內部處理能力與原切片驗收應搭配最新 worker 教學閱讀。
 
 ## 操作頁面
 

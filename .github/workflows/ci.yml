@@ -38,7 +38,8 @@ jobs:
           import secrets
           names = ('POSTGRES_OWNER_PASSWORD', 'RUNTIME_DB_PASSWORD',
                    'APP_CSRF_SECRET', 'SEED_USER_PASSWORD',
-                   'TEST_POSTGRES_OWNER_PASSWORD', 'TEST_RUNTIME_DB_PASSWORD')
+                   'TEST_POSTGRES_OWNER_PASSWORD', 'TEST_RUNTIME_DB_PASSWORD',
+                   'WORKER_DB_PASSWORD', 'TEST_WORKER_DB_PASSWORD')
           values = {name: secrets.token_hex(32) for name in names}
           for value in values.values():
               print(f'::add-mask::{value}')
@@ -61,6 +62,8 @@ jobs:
             -v "$PWD/tools/ci:/ci:ro" \
             -v "$PWD/test-results:/results" \
             tests python /ci/run_tests.py pytest --output /results/postgres.json tests evals/tests
+      - name: Check restricted worker startup
+        run: docker compose --profile worker run --rm -T worker python -m app.worker --once
       - name: Tear down all ephemeral services and volumes
         if: always()
         run: docker compose down --volumes --remove-orphans --timeout 15

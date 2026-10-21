@@ -12,6 +12,16 @@
 
 ## Global Constraints
 
+### 2026-10-21 worker dependency update
+
+`005_txt_worker_recovery.sql` adds `rag_worker` (dedicated LOGIN enabled by
+bootstrap only with a separate password), attempt counters and recovery scheduling.
+The worker has direct EXECUTE grants, no role memberships or direct business-table
+access. RLS migrations must now start after 005 and include recovery, expired-token
+rejection, locked-candidate skipping and actual worker LOGIN tests. Nine business
+tables still require policy integration; no RLS policy has been enabled by this
+delivery. See `docs/txt-worker.md` and its acceptance record.
+
 ### 2026-10-20 version-write dependency update
 
 The TXT write slice adds migration `004_m2_version_writes.sql`, protected
