@@ -126,15 +126,25 @@ def seed_demo_data(connection, password):
         for title, category, visibility, status, content, readers in tenant["documents"]:
             document_id = connection.execute(
                 """INSERT INTO app_core.documents
-                   (tenant_id, title, category, visibility, owner_id, status, content)
-                   VALUES (%s, %s, %s, %s, %s, %s, %s) RETURNING id""",
-                (tenant_id, title, category, visibility, user_ids["owner"], status, content),
+                   (tenant_id, title, category, owner_id, status)
+                   VALUES (%s, %s, %s, %s, %s) RETURNING id""",
+                (tenant_id, title, category, user_ids["owner"], status),
             ).fetchone()[0]
+            version_id = connection.execute(
+                """INSERT INTO app_core.document_versions
+                   (tenant_id, document_id, version_number, owner_id, visibility, status, content)
+                   VALUES (%s, %s, 1, %s, %s, %s, %s) RETURNING id""",
+                (tenant_id, document_id, user_ids["owner"], visibility, status, content),
+            ).fetchone()[0]
+            connection.execute(
+                "UPDATE app_core.documents SET current_version_id = %s WHERE id = %s",
+                (version_id, document_id),
+            )
             for reader in readers:
                 connection.execute(
-                    "INSERT INTO app_core.document_readers (tenant_id, document_id, user_id) "
+                    "INSERT INTO app_core.version_readers (tenant_id, version_id, user_id) "
                     "VALUES (%s, %s, %s)",
-                    (tenant_id, document_id, user_ids[reader]),
+                    (tenant_id, version_id, user_ids[reader]),
                 )
         print(f"已建立 seed：{tenant['name']}")
 
