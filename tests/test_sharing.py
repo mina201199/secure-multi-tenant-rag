@@ -22,7 +22,10 @@ def sharing_document(admin_db):
     admin_db.execute("UPDATE app_core.documents SET current_version_id = %s WHERE id = %s", (version_id, document_id))
     users = dict(admin_db.execute("SELECT username, id FROM app_core.users"))
     yield {"id": document_id, "version_id": version_id, "users": users}
-    admin_db.execute("DELETE FROM app_core.version_readers WHERE version_id = %s", (version_id,))
+    admin_db.execute(
+        """DELETE FROM app_core.version_readers WHERE version_id IN
+           (SELECT id FROM app_core.document_versions WHERE document_id = %s)""", (document_id,)
+    )
     admin_db.execute("UPDATE app_core.documents SET current_version_id = NULL WHERE id = %s", (document_id,))
     admin_db.execute("DELETE FROM app_core.document_versions WHERE document_id = %s", (document_id,))
     admin_db.execute("DELETE FROM app_core.documents WHERE id = %s", (document_id,))
@@ -177,7 +180,8 @@ def test_effective_version_owner_controls_sharing(client, sharing_document, admi
     assert change(client, sharing_document, 'company').status_code == 200
 
 
-def test_waiting_share_rechecks_pointer_after_version_lock(sharing_document, admin_db):
+@pytest.mark.parametrize('requestNewVersion', [False, True])
+def test_waiting_share_rechecks_pointer_after_version_lock(sharing_document, admin_db, requestNewVersion):
     """An old query snapshot must not grant ACL to the version replaced while it waited."""
     import os
     import threading
@@ -191,6 +195,13 @@ def test_waiting_share_rechecks_pointer_after_version_lock(sharing_document, adm
 
     doc = sharing_document
     tenant_id = admin_db.execute('SELECT tenant_id FROM app_core.documents WHERE id = %s', (doc['id'],)).fetchone()[0]
+    newVersion = admin_db.execute(
+        """INSERT INTO app_core.document_versions
+           (tenant_id, document_id, version_number, owner_id, status, content)
+           VALUES (%s, %s, 2, %s, 'ready', 'new effective content') RETURNING id""",
+        (tenant_id, doc['id'], doc['users']['a.owner']),
+    ).fetchone()[0]
+    requestedVersion = newVersion if requestNewVersion else doc['version_id']
     outcome = []
     started = threading.Event()
 
@@ -200,7 +211,7 @@ def test_waiting_share_rechecks_pointer_after_version_lock(sharing_document, adm
             started.set()
             try:
                 repository.replace_sharing(connection, {'id': doc['users']['a.owner'], 'tenant_id': tenant_id},
-                                           doc['id'], doc['version_id'], 'specified', [doc['users']['a.reader']])
+                                           doc['id'], requestedVersion, 'specified', [doc['users']['a.reader']])
                 outcome.append(200)
             except HTTPException as error:
                 connection.rollback()
@@ -224,14 +235,8 @@ def test_waiting_share_rechecks_pointer_after_version_lock(sharing_document, adm
                 break
             time.sleep(0.02)
         assert waiting, 'share query did not wait on outgoing version lock'
-        new_version = admin_db.execute(
-            """INSERT INTO app_core.document_versions
-               (tenant_id, document_id, version_number, owner_id, status, content)
-               VALUES (%s, %s, 2, %s, 'ready', 'new effective content') RETURNING id""",
-            (tenant_id, doc['id'], doc['users']['a.owner']),
-        ).fetchone()[0]
         admin_db.execute('UPDATE app_core.documents SET current_version_id = %s WHERE id = %s',
-                         (new_version, doc['id']))
+                         (newVersion, doc['id']))
         admin_db.execute('COMMIT')
     finally:
         admin_db.execute('ROLLBACK')
@@ -240,3 +245,5 @@ def test_waiting_share_rechecks_pointer_after_version_lock(sharing_document, adm
     assert outcome == [409]
     assert admin_db.execute('SELECT count(*) FROM app_core.version_readers WHERE version_id = %s',
                             (doc['version_id'],)).fetchone()[0] == 0
+    assert admin_db.execute('SELECT count(*) FROM app_core.version_readers WHERE version_id = %s',
+                            (newVersion,)).fetchone()[0] == 0
