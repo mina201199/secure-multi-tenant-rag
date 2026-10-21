@@ -4,7 +4,7 @@
 
 **HTML 互動展示：[知序 Atlas](http://127.0.0.1:8008/demo)**。啟動 Compose 後即可開啟，不必登入。依本 README 的規劃展示文件庫、上傳處理、閱讀權限、新版、來源問答、交接、歷史、成員與預算；使用虛構記憶體資料，重新整理即還原，不代表後端已實作。真實登入與授權閱讀仍在 `/login`、`/documents`。展示範圍及驗證見 [介面說明](docs/ui-demo.md)。
 
-**更新日期：2026-10-21。PR #70～#75 已完成程式複核與整合驗收：M1、M2-01 版本模型及 M2-02 分享 / 撤權可勾選完成；TXT 新版排隊、原子發布及 worker／失聯恢復已可使用。啟動 worker profile 後會自動處理；PR #76 已驗收受限文字 PDF，尚無 RLS 與 RAG，30 題核心題庫仍待人工簽核。PR #77 交付文件封存 API／確認頁與工作取消；最新完整回歸為 391 項與 120 子測試通過，見 [封存驗收](docs/document-archive.md) 與 [PDF 處理](docs/pdf-processing.md)；先前 PR 整合見 [驗收進度](docs/pr-stack-acceptance-2026-10-21.md)。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
+**更新日期：2026-10-21。PR #70～#75 已完成程式複核與整合驗收：M1、M2-01 版本模型及 M2-02 分享 / 撤權可勾選完成；TXT 新版排隊、原子發布及 worker／失聯恢復已可使用。啟動 worker profile 後會自動處理；PR #76 已驗收受限文字 PDF，尚無 RLS 與 RAG，30 題核心題庫仍待人工簽核。PR #77 交付文件封存 API／確認頁與工作取消；最新完整回歸為 415 項與 120 子測試通過，見 [歷史後台驗收](docs/history-access.md)、[封存驗收](docs/document-archive.md) 與 [PDF 處理](docs/pdf-processing.md)；先前 PR 整合見 [驗收進度](docs/pr-stack-acceptance-2026-10-21.md)。** 本分支接續 #20，新增 [歷史調閱與獨立授權後台](docs/history-access.md)；封存後即使有歷史權也一律拒絕調閱。 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
 
 **組員認領入口：[GitHub 任務總索引 #1](https://github.com/mina201199/secure-multi-tenant-rag/issues/1)**。原先 67 項待辦已各自建立 Issue，依 7 個階段的 [Milestones](https://github.com/mina201199/secure-multi-tenant-rag/milestones) 與 `phase:*` 標籤分類；目前完成狀態以 Issue 與下方清單為準。每項包含前置任務、完成條件與認領方式；請先看索引的起步建議，留言認領並由 Assignees 追蹤負責人。功能驗收後再關閉 Issue，並同步更新本文件勾選狀態。
 
@@ -37,15 +37,15 @@
 | `app/db.py` | 改用 psycopg 連線池，一個 request 一個交易 | M2 加 RLS 時只用 `SET LOCAL` |
 | `app/security.py` | 已接上登入、登出、Session、CSRF、Origin / Referer 檢查與限流 | 審查並補充惡意案例 |
 | `app/repository.py`、`app/version_service.py`、`app/worker.py` | 版本閱讀、分享、TXT／PDF 排隊、自動發布與有限失聯恢復已建立 | 依 [worker 教學](docs/txt-worker.md) 啟動；PDF 限制見 [處理說明](docs/pdf-processing.md)，後續接 RLS |
-| API / HTML 頁面 | 已有登入、文件清單 / 內容、分享 / 撤權、封存確認與安全錯誤頁 | 補後續功能頁面 |
+| API / HTML 頁面 | 已有登入、文件清單 / 內容、分享 / 撤權、封存確認、歷史調閱／獨立授權與安全錯誤頁 | 補後續功能頁面 |
 | 初始化 / 測試帳號 | `app/bootstrap.py`、`app/migrations/`、兩家公司 seed 已建立 | 見「測試帳號」 |
-| 自動化測試 | 完整回歸 391 項、120 子測試通過；含封存競態、PDF 資源限制、發布及恢復 | 新功能同步補正反案例；[封存驗收](docs/document-archive.md) |
+| 自動化測試 | 完整回歸 415 項、120 子測試通過；含歷史 ACL／稽核、封存競態、PDF 資源限制、發布及恢復 | 新功能同步補正反案例；[歷史驗收](docs/history-access.md) |
 | 白話教學 | 已補 [M1](docs/m1-onboarding.md)、[M2-01](docs/m2-versions.md) 與 [M2-02](docs/m2-sharing.md) | 後續階段持續補齊 |
-| 文件生命週期 / RLS / RAG / 評估 | 版本閱讀、分享及 TXT／PDF 新版／worker 已建立；RLS 設計與題庫草案已交付 | 封存 API 與 worker 取消已驗收；續補歷史／交接與 RLS；題庫先人工審核 |
+| 文件生命週期 / RLS / RAG / 評估 | 版本閱讀、分享及 TXT／PDF 新版／worker 已建立；RLS 設計與題庫草案已交付 | 封存 API 與 worker 取消已驗收；歷史後台見 #20；續補交接與 RLS；題庫先人工審核 |
 
 **已驗收的基礎：兩家公司的預建帳號各自登入後，只能列出及開啟自己有權閱讀的文件；直接呼叫 API 或猜測 ID 也不能越權。尚未啟用資料庫 RLS。**
 
-目前接手順序：[文件封存](docs/document-archive.md) 核心已驗收，接著補歷史、交接與 RLS；解析後續補來源下載、TXT 段落／跨頁定位與清洗切塊。RLS 的 auth／business 連線拆分可並行準備，政策啟用前須整合 writer／processor／worker。最後才接付費模型。M1-01～11、M2-01～04 與 M3A-02 已依各項驗收條件完成（PDF 限已記錄的保守格式）；這不表示完整 M2／M3A 已完成。封存與後續整合詳見 [PR #77 與 Issue 進度對照](docs/document-archive.md#pr-77-複核與-issue-進度)；先前 PDF 範圍見 [PR #76 驗收](docs/pdf-processing.md#pr-76-合併複核與-issue-進度)。
+目前接手順序：[文件封存](docs/document-archive.md) 核心已驗收；本分支交付 [#20 歷史後台](docs/history-access.md)，接著補交接與 RLS；解析後續補來源下載、TXT 段落／跨頁定位與清洗切塊。RLS 的 auth／business 連線拆分可並行準備，政策啟用前須整合 writer／processor／worker。最後才接付費模型。M1-01～11、M2-01～04、M2-06 與 M3A-02 已依各項驗收條件完成（PDF 限已記錄的保守格式）；這不表示完整 M2／M3A 已完成。封存與後續整合詳見 [PR #77 與 Issue 進度對照](docs/document-archive.md#pr-77-複核與-issue-進度)；先前 PDF 範圍見 [PR #76 驗收](docs/pdf-processing.md#pr-76-合併複核與-issue-進度)。
 
 本輪四條工作線已整合：分享 / 撤權 API 與頁面見 [M2-02 教學](docs/m2-sharing.md)；[RLS 設計](docs/m2-rls-design.md) 已記錄政策與未來驗收契約，但尚未啟用 RLS；[30 題核心題庫](evals/README.md) 使用獨立虛構來源，尚待人工審核與實際 RAG 評估。驗證結果與限制見 [整合紀錄](docs/parallel-integration.md)。
 
@@ -128,7 +128,7 @@ flowchart TD
 | 回答 | 決策採 `gpt-5.4-mini` | 尚未整合 SDK / API |
 | 解析 / tokenizer | pypdf 6.21.1；保留實際頁次 | 受限文字 PDF 已接入；tokenizer 待選定 |
 | 背景工作 | PostgreSQL 佇列、租約、專用 worker 登入 | TXT／PDF 可自動發布、失聯回收與最多 3 次領取；模型處理待接 |
-| 測試 | pytest + HTTPX；真實 PostgreSQL | 391 項與 120 子測試通過；RLS 行為測試待實作 |
+| 測試 | pytest + HTTPX；真實 PostgreSQL | 415 項與 120 子測試通過；RLS 行為測試待實作 |
 | 本機編排 | Docker Compose；web 綁定 `127.0.0.1:8008` | 建置、初始化、啟動與 test profile 已實際執行 |
 
 版本範圍見 [requirements.txt](requirements.txt) 與 [requirements-dev.txt](requirements-dev.txt)，已通過測試的確切版本見 [requirements.lock](requirements.lock)。沒有既定 React、LangChain、LangGraph、Redis 或 Celery 依賴；如需新增，先說明必要性並更新架構決策。Hybrid、Reranker、第二個 Embedding 模型在對應實驗前選定與記錄。
@@ -270,6 +270,7 @@ seed 只在公司不存在時建立；要重設本機資料，執行 `docker com
 - 新版處理中或失敗時，舊的有效版本繼續使用。
 - 新版成功取代舊版後，前台只使用新版；無新版權限者不能回退舊版。
 - 封存取代一般刪除；保留原始檔、文字、段落、向量與紀錄，退出前台開啟、搜尋及下載。
+- 2026-10-21 確認採更嚴格規則：封存後即使持有獨立歷史權，後台也拒絕調閱；歷史 ACL 與稽核保留。
 - 背景重試不能重新啟用已封存文件；舊答案引用不能繞過封存或版本規則。
 - 歷史調閱是獨立授權，由該版本擁有者授予同公司帳號；新版閱讀權、管理員或主管身分都不包含歷史權。
 - 後台調閱要重新授權並記錄誰、何時、哪個版本。前台不提供歷史回查。
@@ -287,7 +288,7 @@ seed 只在公司不存在時建立；要重設本機資料，執行 `docker com
 
 ## 資料模型與資料庫設計任務
 
-以下包含已實作與規劃中的模型。001 建立 M1 schema；002 遷移版本與 ACL；003 開放受限分享；004 新增不可變 `version_sources` 與 `version_jobs`；005 加入 worker 與重試排程。歷史、交接資料表尚未建立；詳見 [M2-01 說明](docs/m2-versions.md) 與 [worker 教學](docs/txt-worker.md)。
+以下包含已實作與規劃中的模型。001 建立 M1 schema；002 遷移版本與 ACL；003 開放受限分享；004 新增不可變 `version_sources` 與 `version_jobs`；005 加入 worker 與重試排程；006 加入 PDF 來源／頁次；007 加入封存；008 加入歷史 ACL 與調閱稽核。交接資料表尚未建立；歷史見 [#20 說明](docs/history-access.md)，先前範圍見 [M2-01 說明](docs/m2-versions.md) 與 [worker 教學](docs/txt-worker.md)。
 
 | 邏輯資料 | 需要保存的內容與關聯 |
 | --- | --- |
@@ -298,7 +299,8 @@ seed 只在公司不存在時建立；要重設本機資料，執行 `docker com
 | documents | 公司、標題、業務分類、目前管理責任、目前有效版本、封存狀態 |
 | document_versions | 文件、公司、版本 ID、版本擁有者、來源資訊、原檔指紋、處理狀態、時間 |
 | version_readers / 版本閱讀 ACL | 已取代 document_readers，閱讀權綁定明確版本；新版不繼承 |
-| history_permissions | 獨立的歷史調閱授權、授權人與接收人、版本範圍 |
+| history_readers | 已建立：獨立歷史 ACL、授權人／接收人、版本與時間 |
+| history_audit_events | 已建立：歷史授權／撤權／調閱的 actor、version、subject 與時間；不含正文 |
 | chunks / embeddings | 公司、文件與版本、原文位置、頁次 / 段落、文字、token 數、模型與向量 |
 | jobs | 可信 tenant / version、處理步驟、狀態、重試、錯誤、恢復及去重資訊 |
 | transfer_requests | 申請人、主管、候選接收人、文件與版本範圍、原因、狀態及審核時間 |
@@ -318,7 +320,7 @@ seed 只在公司不存在時建立；要重設本機資料，執行 `docker com
 
 ## 預計的 API 與頁面契約
 
-以下是**待實作的介面草案**，組員可調整路徑，但須同步更新 README、測試與 OpenAPI。路由權限不能只靠隱藏按鈕。
+以下包含已實作與待實作的介面，歷史後台的正式契約見 [操作說明](docs/history-access.md)，組員可調整路徑，但須同步更新 README、測試與 OpenAPI。路由權限不能只靠隱藏按鈕。
 
 | 模組 | 建議介面 | 規則與預期輸出 |
 | --- | --- | --- |
@@ -329,7 +331,7 @@ seed 只在公司不存在時建立；要重設本機資料，執行 `docker com
 | 版本與重試 | `POST /api/documents/{id}/versions`、`POST /api/jobs/{id}/retry` | 目前擁有者、冪等性、預算、封存與有效版本切換 |
 | 分享 | `PUT /api/documents/{id}/sharing` | 擁有者、目前版本、同公司有效帳號；拒絕跨公司 ACL |
 | 封存與下載 | `POST /api/documents/{id}/archive`、`GET /api/documents/{id}/download` | 封存後退出前台；下載走授權，不暴露靜態路徑 |
-| 歷史後台 | `GET /api/history/versions/{id}` 與歷史授權介面 | 獨立歷史權、版本 / 公司 / 帳號檢查、調閱稽核 |
+| 歷史後台 | `GET /api/history/versions`、`GET/PUT /api/history/versions/{id}/access`、`POST /api/history/versions/{id}/read` | 獨立歷史權、封存拒絕、版本／公司／帳號重驗、提交稽核後交付 |
 | 交接 | `POST /api/transfers`、`GET /api/transfers`、審核 approve / reject | 申請與審核範圍、資訊最小化、自我接收禁止、交易一致性 |
 | 帳號管理 | 本公司帳號啟用 / 停用介面 | 只有公司管理員；不增加角色、主管或文件權限 |
 | 問答 | `POST /api/questions` | 單輪問題、授權 Top-5、答案 / 拒答、文件名與來源位置引用 |
@@ -372,7 +374,7 @@ M1 驗收：兩家公司登入、各自可讀文件正確、猜 ID 與直接 API
 - [x] M2-03 僅目前擁有者可新增版本，新版預設私人且不繼承舊 ACL。
 - [x] M2-04 新版成功前保留舊有效版；成功後原子切換，禁止未獲新版授權者回退舊版。
 - [ ] M2-05 封存保留所有資料，阻止一般開啟、下載、檢索與背景工作重新啟用。（封存／前台閱讀／worker 已實作；下載與檢索入口尚未建立，完整跨功能驗收仍待完成，見 [封存說明](docs/document-archive.md)。）
-- [ ] M2-06 實作獨立歷史調閱與授權後台；檢查版本擁有者權限與完整稽核。
+- [x] M2-06 實作獨立歷史調閱與授權後台；檢查版本擁有者權限與完整稽核。（[驗收與操作](docs/history-access.md)；封存後後台也拒絕調閱，RLS 另由 M2-11／12 驗收。）
 - [ ] M2-07 實作交接提出、待審、核准 / 拒絕、明確版本範圍與有限主管資訊。
 - [ ] M2-08 核准時重查主管 / 接收人 / 擁有者 / 文件 / 申請，禁止主管自收與跨公司接收。
 - [ ] M2-09 以交易及並行控制防止重複核准、過期申請與部分移轉；保留既有閱讀 ACL。
@@ -532,4 +534,4 @@ M3 驗收：PDF / TXT 到帶引用回答的完整流程可重現，失敗 / 重�
 - [ ] 四階段白話教學、練習、架構說明、展示腳本與面試問答。
 - [ ] 授權條款、相依授權檢查與可分享的作品集內容。
 
-本輪已驗收 M1、M2-01、M2-02、[TXT 版本寫入](docs/m2-version-writes.md) 與 [worker／恢復](docs/txt-worker.md)。PR #76 新增 [PDF 正式處理](docs/pdf-processing.md)，啟動 worker profile 後 TXT／受限文字 PDF 上傳可自動發布；PR #77 已交付 [文件封存](docs/document-archive.md) 核心與 worker 取消；歷史、交接、RLS 與下載／檢索的封存整合驗收仍待後續。最新 Issue 對照見 [封存驗收進度](docs/document-archive.md#pr-77-複核與-issue-進度)；先前範圍見 [PR #70～#75 驗收](docs/pr-stack-acceptance-2026-10-21.md)。
+本輪已驗收 M1、M2-01、M2-02、[TXT 版本寫入](docs/m2-version-writes.md) 與 [worker／恢復](docs/txt-worker.md)。PR #76 新增 [PDF 正式處理](docs/pdf-processing.md)，啟動 worker profile 後 TXT／受限文字 PDF 上傳可自動發布；PR #77 已交付 [文件封存](docs/document-archive.md) 核心與 worker 取消；本分支已交付 [歷史調閱與獨立授權](docs/history-access.md)；交接、RLS 與下載／檢索的封存整合驗收仍待後續。最新 Issue 對照見 [封存驗收進度](docs/document-archive.md#pr-77-複核與-issue-進度)；先前範圍見 [PR #70～#75 驗收](docs/pr-stack-acceptance-2026-10-21.md)。

@@ -1,0 +1,18 @@
+{% extends "base.html" %}
+{% block title %}歷史授權｜{{ version.title }}{% endblock %}
+{% block content %}
+<a class="back-link" href="/history">返回歷史調閱後台</a>
+<div class="page-heading"><div><div class="eyebrow">HISTORY ACCESS</div><h1>歷史授權與稽核</h1><p>{{ version.title }} · 第 {{ version.version_number }} 版</p></div></div>
+<section class="paper"><h2>獨立調閱權</h2><p>只有此版本擁有者能設定。授權不影響一般閱讀或其他版本；封存後所有歷史入口都會拒絕存取。</p>
+<div class="table-scroll"><table class="document-table"><thead><tr><th>帳號</th><th>目前授權</th><th>操作</th></tr></thead><tbody>
+{% for reader in version.readers %}<tr><td>{{ reader.display_name }}（{{ reader.username }}）{% if not reader.is_active %} · 已停用{% endif %}</td><td>{{ '已授權' if reader.granted else '未授權' }}</td><td>
+<form method="post" action="/history/versions/{{ version.version_id }}/access">
+<input type="hidden" name="csrf_token" value="{{ me.csrf_token }}"><input type="hidden" name="reader_id" value="{{ reader.id }}">
+<button class="button secondary" name="action" value="{{ 'revoke' if reader.granted else 'grant' }}" type="submit">{{ '撤銷調閱權' if reader.granted else '授予調閱權' }}</button>
+</form></td></tr>{% endfor %}
+</tbody></table></div></section>
+<section class="paper"><h2>最近 50 筆稽核紀錄</h2><p>只記錄操作人、時間、版本與動作，不保存正文或登入憑證。</p>
+{% if version.events %}<div class="table-scroll"><table class="document-table"><thead><tr><th>編號</th><th>時間</th><th>操作人</th><th>動作</th><th>對象</th></tr></thead><tbody>
+{% for event in version.events %}<tr><td>{{ event.id }}</td><td>{{ event.occurred_at }}</td><td>{{ event.actor_username }}</td><td>{{ {'read':'調閱','grant':'授權','revoke':'撤權'}[event.action] }}</td><td>{{ event.subject_username or '—' }}</td></tr>{% endfor %}
+</tbody></table></div>{% else %}<p>尚無稽核紀錄。</p>{% endif %}</section>
+{% endblock %}

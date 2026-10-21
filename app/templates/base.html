@@ -23,7 +23,7 @@
       {% endfor %}
       <div class="nav-label second-label">管理與紀錄</div>
       {% for id, name, glyph in [('history','歷史調閱','history'),('members','成員管理','users'),('usage','用量與預算','chart')] %}
-      <a class="nav-item" data-nav="{{ id }}" href="/demo#{{ id }}">{{ icon(glyph) }}<span>{{ name }}</span></a>
+      <a class="nav-item" data-nav="{{ id }}" href="{{ '/history' if id == 'history' and not demo_mode else '/demo#' ~ id }}">{{ icon(glyph) }}<span>{{ name }}</span></a>
       {% endfor %}
     </nav>
     <div class="sidebar-bottom">

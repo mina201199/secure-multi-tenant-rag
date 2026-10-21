@@ -1,0 +1,8 @@
+{% extends "base.html" %}
+{% block title %}歷史版本｜{{ version.title }}{% endblock %}
+{% block content %}
+<a class="back-link" href="/history">返回歷史調閱後台</a>
+<div class="page-heading"><div><div class="eyebrow">AUDITED HISTORY READER</div><h1>{{ version.title }}</h1><p>第 {{ version.version_number }} 版 · 歷史版本 · 稽核編號 {{ version.audit_id }}</p></div></div>
+<div class="inline-note">這是獨立授權的歷史調閱，不能作為一般閱讀、下載或問答引用入口。後續請求仍會重新檢查授權與封存狀態。</div>
+<article class="paper">{% if version.source_pages %}{% for page in version.source_pages %}<section aria-label="第 {{ page.page }} 頁"><h2>第 {{ page.page }} 頁</h2><div class="document-content">{{ page.text }}</div></section>{% endfor %}{% else %}<div class="document-content">{{ version.content }}</div>{% endif %}</article>
+{% endblock %}

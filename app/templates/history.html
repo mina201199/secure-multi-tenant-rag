@@ -1,0 +1,17 @@
+{% extends "base.html" %}
+{% block title %}歷史調閱後台｜知序 Atlas{% endblock %}
+{% block content %}
+<div class="page-heading"><div><div class="eyebrow">VERSION HISTORY</div><h1>歷史調閱後台</h1><p>獨立授權，只適用於未封存檔案的完成歷史版本。</p></div></div>
+<div class="inline-note">一般閱讀、新版權限、管理員與主管身分都不包含歷史調閱權。版本擁有者也須明確授予自己調閱權；每次調閱都會留下稽核。</div>
+<section class="paper">
+{% if versions %}
+<div class="table-scroll"><table class="document-table"><thead><tr><th>檔案</th><th>版本</th><th>操作</th></tr></thead><tbody>
+{% for version in versions %}<tr><td>{{ version.title }}</td><td>第 {{ version.version_number }} 版</td><td>
+{% if version.can_manage %}<a class="button secondary" href="/history/versions/{{ version.version_id }}/access">歷史授權與稽核</a>{% endif %}
+{% if version.can_read %}<form method="post" action="/history/versions/{{ version.version_id }}/read"><input type="hidden" name="csrf_token" value="{{ me.csrf_token }}"><button class="button primary" type="submit">調閱並記錄</button></form>{% else %}<span>尚無調閱權</span>{% endif %}
+</td></tr>{% endfor %}
+</tbody></table></div>
+{% if versions|length == 100 %}<a class="button secondary" href="/history?after_id={{ versions[-1].version_id }}">下一頁</a>{% endif %}
+{% else %}<p>沒有可管理或已授權的歷史版本。</p>{% endif %}
+</section>
+{% endblock %}
