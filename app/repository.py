@@ -64,14 +64,13 @@ def active_sharing_candidates(connection, identity):
 def replace_sharing(connection, identity, document_id, version_id, mode, reader_ids):
     from fastapi import HTTPException
 
-    current = owned_current_version(connection, identity, document_id, lock=True)
+    lockedVersion = owned_current_version(connection, identity, document_id, lock=True)
     # A query that waited for v can still hold the old d snapshot. Recheck in a
     # new READ COMMITTED statement while the outgoing version lock remains held.
-    if current is not None:
-        current = owned_current_version(connection, identity, document_id)
+    current = owned_current_version(connection, identity, document_id) if lockedVersion is not None else None
     if current is None:
         raise HTTPException(404, '找不到文件')
-    if current['version_id'] != version_id:
+    if current['version_id'] != lockedVersion['version_id'] or current['version_id'] != version_id:
         raise HTTPException(409, '有效版本已變更，請重新載入分享設定')
     readers = sorted(set(reader_ids))
     if (mode == 'specified' and not readers) or (mode != 'specified' and readers):

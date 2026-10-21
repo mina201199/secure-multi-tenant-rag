@@ -19,7 +19,7 @@
     <div class="nav-label">工作空間</div>
     <nav aria-label="主要導覽">
       {% for id, name, glyph in [('documents','文件知識庫','folder'),('ask','知識問答','sparkles'),('processing','文件處理','activity'),('transfers','文件交接','transfer')] %}
-      <a class="nav-item {{ 'active' if id == 'documents' }}" data-nav="{{ id }}" href="/demo#{{ id }}">{{ icon(glyph) }}<span>{{ name }}</span>{% if id == 'documents' %}<span class="nav-dot"></span>{% endif %}</a>
+      <a class="nav-item {{ 'active' if id == 'documents' }}" data-nav="{{ id }}" href="{{ '/documents' if id == 'documents' and not demo_mode else '/demo#' ~ id }}">{{ icon(glyph) }}<span>{{ name }}</span>{% if id == 'documents' %}<span class="nav-dot"></span>{% endif %}</a>
       {% endfor %}
       <div class="nav-label second-label">管理與紀錄</div>
       {% for id, name, glyph in [('history','歷史調閱','history'),('members','成員管理','users'),('usage','用量與預算','chart')] %}
