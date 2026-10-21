@@ -32,13 +32,19 @@ class ReadinessReportTests(unittest.TestCase):
         report = evaluate([], [], [{"member_name": "rag_app", "role_name": "other"}])
         self.assertIn("runtime_role_membership", report["blockers"])
 
+    def test_worker_login_with_bypass_is_reported(self):
+        report = evaluate([dict(rolname='rag_worker', rolsuper=False, rolbypassrls=True,
+                               rolcreaterole=False, rolcreatedb=False, rolreplication=False,
+                               rolinherit=False, rolcanlogin=True)], [], [])
+        self.assertIn('unsafe_role_flags:rag_worker', report['blockers'])
+
     def test_even_complete_metadata_does_not_certify_security(self):
         roles = [dict(rolname=name, rolsuper=False, rolbypassrls=False,
                       rolcreaterole=False, rolcreatedb=False, rolreplication=False,
                       rolinherit=False, rolcanlogin=login)
                  for name, login in [("rag_app", True), ("rag_auth", True),
                                      ("rag_policy_reader", False), ("rag_version_writer", False),
-                                     ("rag_version_processor", False)]]
+                                     ("rag_version_processor", False), ("rag_worker", True)]]
         tables = [dict(relname=name, relrowsecurity=True,
                        relforcerowsecurity=True, runtime_owner=False)
                   for name in ["tenants", "users", "sessions", "login_limits",

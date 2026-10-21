@@ -54,6 +54,17 @@ def apply_migrations(connection):
         print(f"已套用 migration：{path.stem}")
 
 
+def ensure_worker_role(connection, password):
+  # 沒設定專用密碼就保持 NOLOGIN，避免默默沿用 web 或 owner 憑證。
+  if not password:
+    connection.execute('ALTER ROLE rag_worker NOLOGIN PASSWORD NULL')
+    return
+  connection.execute(sql.SQL(
+    'ALTER ROLE rag_worker WITH LOGIN NOINHERIT NOSUPERUSER NOCREATEDB '
+    'NOCREATEROLE NOREPLICATION NOBYPASSRLS PASSWORD {}'
+  ).format(sql.Literal(password)))
+
+
 def demo_tenants():
     """兩家公司使用相同標題、不同內容，才能測出「別家文件更相近也不能看到」。"""
     tenants = []
@@ -158,6 +169,7 @@ def main():
         connection.execute("SELECT pg_advisory_xact_lock(%s)", (BOOTSTRAP_LOCK_ID,))
         ensure_runtime_role(connection, runtime_password)
         apply_migrations(connection)
+        ensure_worker_role(connection, os.getenv('WORKER_DB_PASSWORD'))
         # 沒設定 seed 密碼就不建立示範帳號，避免正式環境意外出現共用密碼帳號
         if seed_password:
             seed_demo_data(connection, seed_password)

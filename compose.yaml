@@ -31,6 +31,7 @@ services:
     environment:
       DATABASE_ADMIN_URL: postgresql://rag_owner:${POSTGRES_OWNER_PASSWORD}@db:5432/rag_local
       RUNTIME_DB_PASSWORD: ${RUNTIME_DB_PASSWORD}
+      WORKER_DB_PASSWORD: ${WORKER_DB_PASSWORD:-}
       SEED_USER_PASSWORD: ${SEED_USER_PASSWORD:?請在 .env 設定 SEED_USER_PASSWORD}
     command: ["python", "-m", "app.bootstrap"]
     depends_on:
@@ -68,6 +69,18 @@ services:
       timeout: 3s
       retries: 30
 
+  worker:
+    image: secure-rag-lesson1-app:local
+    pull_policy: never
+    profiles: ["worker"]
+    environment:
+      WORKER_DATABASE_URL: postgresql://rag_worker:${WORKER_DB_PASSWORD:-}@db:5432/rag_local
+    command: ["python", "-m", "app.worker"]
+    stop_grace_period: 40s
+    depends_on:
+      setup:
+        condition: service_completed_successfully
+
   tests:
     build:
       context: .
@@ -79,6 +92,7 @@ services:
       DATABASE_URL: postgresql://rag_app:${TEST_RUNTIME_DB_PASSWORD:?請在 .env 設定 TEST_RUNTIME_DB_PASSWORD}@test-db:5432/rag_test
       DATABASE_ADMIN_URL: postgresql://rag_owner:${TEST_POSTGRES_OWNER_PASSWORD}@test-db:5432/rag_test
       RUNTIME_DB_PASSWORD: ${TEST_RUNTIME_DB_PASSWORD}
+      WORKER_DB_PASSWORD: ${TEST_WORKER_DB_PASSWORD:-}
       SEED_USER_PASSWORD: ${SEED_USER_PASSWORD}
       APP_ENV: test
     depends_on:
