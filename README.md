@@ -28,12 +28,14 @@
 
 本次交付包含 M1–M3 程式、migration、兩家公司虛構 PDF、測試與操作教學。**目前先做不付費開發與測試，請保持 `OPENAI_ENABLED=false`；真實 API 驗收與 M4 品質實驗尚未完成。** GitHub Issues 尚未同步關閉，進度請以本 README 與各階段驗收紀錄為準。
 
+**交接分支為 `codex/milestones-1-3-handoff`。** 遠端 `main` 已另行合併 PR #69 的 M1 實作，與本次 M1–M3 成果有差異，尚未整合。組員請先使用本交接分支；整合回 `main` 前須比較兩份實作、處理資料庫及設定差異並重新驗收，不要直接把另一份 M1 資料庫當成本分支已驗證的升級來源。
+
 ### 1. 第一次取得與啟動
 
 先安裝 Git 與 Docker Desktop，啟動 Docker Desktop 並使用 Linux containers。不需要另外安裝 Python 或 PostgreSQL。以下為 PowerShell 指令；首次建置需要網路下載映像、套件及 tokenizer 資料。
 
 ```powershell
-git clone https://github.com/mina201199/secure-multi-tenant-rag.git
+git clone --branch codex/milestones-1-3-handoff https://github.com/mina201199/secure-multi-tenant-rag.git
 cd secure-multi-tenant-rag
 if (!(Test-Path .env)) { Copy-Item .env.example .env }
 docker compose config --quiet
@@ -88,8 +90,9 @@ docker compose --profile http-test stop test-web test-worker
 已有專案的組員先用 `git status` 確認自己的修改已提交或保存，再更新；不要直接覆蓋未提交的工作：
 
 ```powershell
-git switch main
-git pull --ff-only origin main
+git fetch origin
+git switch codex/milestones-1-3-handoff
+git pull --ff-only origin codex/milestones-1-3-handoff
 docker compose up --build -d --wait
 ```
 
@@ -115,7 +118,7 @@ docker compose --profile test --profile http-test down
 | 交付整理 | M4-15 與最終交付清單 | 第四階段教學、展示腳本、面試筆記、CI 與授權檢查 |
 | 真實模型驗收（暫待） | M3B-05 及 M4 真實模型部分 | 明確啟用後再驗證可用性、實際費用、檢索與答案品質 |
 
-開發請從更新後的 `main` 建立功能分支，例如 `git switch -c codex/m4-evaluation`。完成後執行相關測試，更新 README 及驗收紀錄，透過 PR 說明變更、測試與限制；驗收通過再關閉 Issue。替身測試結果不能填成真實模型分數。
+開發請先從更新後的交接分支建立功能分支，例如 `git switch -c codex/m4-evaluation`；整合回 `main` 後再改以 `main` 為起點。完成後執行相關測試，更新 README 及驗收紀錄，透過 PR 說明變更、測試與限制；驗收通過再關閉 Issue。替身測試結果不能填成真實模型分數。
 
 ## 目前進度與接手順序
 
