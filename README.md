@@ -4,7 +4,7 @@
 
 **HTML 互動展示：[知序 Atlas](http://127.0.0.1:8008/demo)**。啟動 Compose 後即可開啟，不必登入。依本 README 的規劃展示文件庫、上傳處理、閱讀權限、新版、來源問答、交接、歷史、成員與預算；使用虛構記憶體資料，重新整理即還原，不代表後端已實作。真實登入與授權閱讀仍在 `/login`、`/documents`。展示範圍及驗證見 [介面說明](docs/ui-demo.md)。
 
-**更新日期：2026-10-21。PR #70～#75 已完成程式複核與整合驗收：M1、M2-01 版本模型及 M2-02 分享 / 撤權可勾選完成；TXT 新版排隊、原子發布及 worker／失聯恢復已可使用。啟動 worker profile 後會自動處理；本分支已整合受限文字 PDF，尚無 RLS 與 RAG，30 題核心題庫仍待人工簽核。最新完整回歸為 369 項與 120 子測試通過，見 [PDF 處理與驗收](docs/pdf-processing.md)；先前 PR 整合見 [驗收進度](docs/pr-stack-acceptance-2026-10-21.md)。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
+**更新日期：2026-10-21。PR #70～#75 已完成程式複核與整合驗收：M1、M2-01 版本模型及 M2-02 分享 / 撤權可勾選完成；TXT 新版排隊、原子發布及 worker／失聯恢復已可使用。啟動 worker profile 後會自動處理；PR #76 已驗收受限文字 PDF，尚無 RLS 與 RAG，30 題核心題庫仍待人工簽核。最新完整回歸為 369 項與 120 子測試通過，見 [PDF 處理與驗收](docs/pdf-processing.md)；先前 PR 整合見 [驗收進度](docs/pr-stack-acceptance-2026-10-21.md)。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
 
 **組員認領入口：[GitHub 任務總索引 #1](https://github.com/mina201199/secure-multi-tenant-rag/issues/1)**。原先 67 項待辦已各自建立 Issue，依 7 個階段的 [Milestones](https://github.com/mina201199/secure-multi-tenant-rag/milestones) 與 `phase:*` 標籤分類；目前完成狀態以 Issue 與下方清單為準。每項包含前置任務、完成條件與認領方式；請先看索引的起步建議，留言認領並由 Assignees 追蹤負責人。功能驗收後再關閉 Issue，並同步更新本文件勾選狀態。
 
@@ -45,11 +45,11 @@
 
 **已驗收的基礎：兩家公司的預建帳號各自登入後，只能列出及開啟自己有權閱讀的文件；直接呼叫 API 或猜測 ID 也不能越權。尚未啟用資料庫 RLS。**
 
-目前接手順序：複核本分支受限文字 PDF 處理 → 封存、歷史、交接與 RLS。RLS 的 auth／business 連線拆分可並行準備，政策啟用前須整合 writer／processor／worker。最後才接付費模型。M1-01～11、M2-01／02 已驗收；M2-03／04 已有 TXT 與受限 PDF 子集，完整文件生命週期範圍仍開啟。
+目前接手順序：封存、歷史、交接與 RLS；解析後續補來源下載、TXT 段落／跨頁定位與清洗切塊。RLS 的 auth／business 連線拆分可並行準備，政策啟用前須整合 writer／processor／worker。最後才接付費模型。M1-01～11、M2-01～04 與 M3A-02 已依各項驗收條件完成（PDF 限已記錄的保守格式）；這不表示完整 M2／M3A 已完成。詳見 [PR #76 與 Issue 進度對照](docs/pdf-processing.md#pr-76-合併複核與-issue-進度)。
 
 本輪四條工作線已整合：分享 / 撤權 API 與頁面見 [M2-02 教學](docs/m2-sharing.md)；[RLS 設計](docs/m2-rls-design.md) 已記錄政策與未來驗收契約，但尚未啟用 RLS；[30 題核心題庫](evals/README.md) 使用獨立虛構來源，尚待人工審核與實際 RAG 評估。驗證結果與限制見 [整合紀錄](docs/parallel-integration.md)。
 
-後續審查與準備見 [本輪成果及並行待辦](docs/next-parallel-work.md)：已完成獨立 AI PR／題庫複核、30 題人工審核表、獨立 PDF／TXT 原型及 RLS 實作計畫。人工簽核仍待完成；原型未接正式流程，RLS metadata audit 為 NOT_READY，不能視為 M3A 或 RLS 驗收通過。
+後續審查與準備見 [本輪成果及並行待辦](docs/next-parallel-work.md)：已完成獨立 AI PR／題庫複核、30 題人工審核表、獨立 PDF／TXT 原型及 RLS 實作計畫。人工簽核仍待完成；獨立原型保留實驗用途，正式受限 PDF 已另行接入 worker；RLS metadata audit 為 NOT_READY，不能視為 M3A 或 RLS 驗收通過。
 
 先前交付見 [五項並行工作驗證](docs/parallel-followup-results.md)：CI、安全 HTML 錯誤頁、新版寫入契約草案、授權盤點與解析品質樣本。當輪完整回歸為 112 項及 120 子測試；後續已接上 TXT 寫入及 worker，以本頁最新驗收為準。遠端 checks 與合併狀態直接見 [#73](https://github.com/mina201199/secure-multi-tenant-rag/pull/73)、[#74](https://github.com/mina201199/secure-multi-tenant-rag/pull/74)、[#75](https://github.com/mina201199/secure-multi-tenant-rag/pull/75)。
 
@@ -369,8 +369,8 @@ M1 驗收：兩家公司登入、各自可讀文件正確、猜 ID 與直接 API
 
 - [x] M2-01 設計並 migration 到文件 / 版本 / 有效版本 / 版本擁有者 / 版本 ACL 模型。
 - [x] M2-02 實作私人、本公司公開及指定同公司有效帳號分享；撤權下一次請求生效。
-- [ ] M2-03 僅目前擁有者可新增版本，新版預設私人且不繼承舊 ACL。
-- [ ] M2-04 新版成功前保留舊有效版；成功後原子切換，禁止未獲新版授權者回退舊版。
+- [x] M2-03 僅目前擁有者可新增版本，新版預設私人且不繼承舊 ACL。
+- [x] M2-04 新版成功前保留舊有效版；成功後原子切換，禁止未獲新版授權者回退舊版。
 - [ ] M2-05 封存保留所有資料，阻止一般開啟、下載、檢索與背景工作重新啟用。
 - [ ] M2-06 實作獨立歷史調閱與授權後台；檢查版本擁有者權限與完整稽核。
 - [ ] M2-07 實作交接提出、待審、核准 / 拒絕、明確版本範圍與有限主管資訊。
@@ -386,7 +386,7 @@ M2 驗收：權限、版本、歷史、封存與交接規則全部有正反案�
 ### M3A：資料盤點、上傳與文件處理
 
 - [ ] M3A-01 建立資料盤點表：公司、業務分類、來源、擁有者、版本、格式、指紋、授權與處理狀態。
-- [ ] M3A-02 選定文字 PDF / TXT 解析套件；定義大小、頁數、編碼與格式驗證及錯誤回應。
+- [x] M3A-02 選定文字 PDF / TXT 解析套件；定義大小、頁數、編碼與格式驗證及錯誤回應。
 - [ ] M3A-03 原始檔存於受保護位置，保留版本與來源，檔名 / 儲存路徑不可成為授權手段。
 - [ ] M3A-04 PDF 保留實際檔案頁次與跨頁範圍；TXT 固定該版本段落編號。
 - [ ] M3A-05 清洗空白與換行並保存來源對應，不能改寫金額、日期、料號、規格與單位。
@@ -532,4 +532,4 @@ M3 驗收：PDF / TXT 到帶引用回答的完整流程可重現，失敗 / 重�
 - [ ] 四階段白話教學、練習、架構說明、展示腳本與面試問答。
 - [ ] 授權條款、相依授權檢查與可分享的作品集內容。
 
-本輪已驗收 M1、M2-01、M2-02、[TXT 版本寫入](docs/m2-version-writes.md) 與 [worker／恢復](docs/txt-worker.md)。本分支新增 [PDF 正式處理](docs/pdf-processing.md)，啟動 worker profile 後 TXT／受限文字 PDF 上傳可自動發布；歷史、封存、交接及 RLS 仍待後續。完整／部分完成的 Issue 對照見 [驗收進度表](docs/pr-stack-acceptance-2026-10-21.md)。
+本輪已驗收 M1、M2-01、M2-02、[TXT 版本寫入](docs/m2-version-writes.md) 與 [worker／恢復](docs/txt-worker.md)。PR #76 新增 [PDF 正式處理](docs/pdf-processing.md)，啟動 worker profile 後 TXT／受限文字 PDF 上傳可自動發布；歷史、封存、交接及 RLS 仍待後續。最新 Issue 對照見 [PDF 驗收進度](docs/pdf-processing.md#pr-76-合併複核與-issue-進度)；先前範圍見 [PR #70～#75 驗收](docs/pr-stack-acceptance-2026-10-21.md)。
