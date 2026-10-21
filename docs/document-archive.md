@@ -54,3 +54,21 @@ docker compose --profile test run --rm tests pytest -q -p no:cacheprovider --tb=
 2026-10-21：封存專項 **21 passed**，完整回歸 **390 passed、120 subtests passed**，只有既有 Starlette HTTPX deprecation warning。
 
 最終另重建 runtime／test 映像及一次性的空 test-db，重跑相同完整測試得到 **390 passed、120 subtests passed**；readiness／CI runner 工具 **12 tests OK**。獨立程式複核檢查鎖序、權限、資料保留、UI 與 worker 邊界，無待修正問題。
+
+## PR #77 複核與 Issue 進度
+
+[PR #77](https://github.com/mina201199/secure-multi-tenant-rag/pull/77) 交付封存核心與 TXT／PDF 工作取消。合併複核發現歷史版本鎖可能與持有舊 outgoing 鎖的請求互等；新增測試先重現 `LockNotAvailable`，再將後續版本鎖限於 queued／processing。修正後 **22 項封存測試、391 項完整測試與 120 子測試通過**，獨立再次複核無待修正問題；另有 **12 項工具測試通過**。原 390 項結果保留作為修正前證據。
+
+原實作 `0b97644` 的 [postgres／offline CI](https://github.com/mina201199/secure-multi-tenant-rag/actions/runs/39542239519) 成功；最新提交與合併狀態以 PR checks 為準。
+
+| Issue | 本次成果與剩餘範圍 |
+| --- | --- |
+| #19 / M2-05 | 封存 API／確認頁、前台阻擋、工作取消、稽核及資料保留已驗收；下載、檢索與舊引用完整整合仍待實作，維持開啟 |
+| #20 / M2-06 | 已保存封存版本與來源，供後續獨立歷史授權使用；本次未交付歷史後台 |
+| #25、#26 / RLS | 新封存能力的 EXECUTE 限制、跨公司與受限角色測試已加入；仍無 RLS 政策，不能視為 RLS 驗收 |
+| #27 / M2-13 | 正式封存 API、Jinja2 確認頁與直接越權測試已加入；歷史、交接、帳號管理與完整第二階段驗收仍缺 |
+| #30 / M3A-03 | 封存保留來源且沒有公開路徑；授權下載仍未實作，未來須同時測允許下載及封存後拒絕 |
+| #35、#36 / 背景工作 | TXT／PDF queued／processing 取消、舊 token 拒絕、失聯恢復不復活與發布競態已驗收；多步 chunks／vectors、付費閘門與 RLS／交接整合仍缺 |
+| #44、#51 / 檢索與交付 | 後續必須檢查文件層封存狀態；ready 版本保留不代表可搜尋，交付前須重新驗權。本次未交付 RAG |
+
+本次不關閉新的完整任務，README 的 M2-05 保持未勾選；原 67 項任務仍為 16 項完成、51 項待完成。任務總索引 #1 與上述相關 Issue 同步記錄已交付及剩餘範圍。

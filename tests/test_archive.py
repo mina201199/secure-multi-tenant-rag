@@ -280,3 +280,21 @@ def test_archive_waiting_for_publication_rechecks_current_version(runtime_db, pr
     assert pending.result(timeout=10) == 'conflict'
   assert admin_db.execute('SELECT status,current_version_id FROM app_core.documents WHERE id=%s',
     (doc['id'],)).fetchone() == ('ready', queued['version_id'])
+
+
+def test_archive_does_not_wait_on_stale_outgoing_version(runtime_db, workerDb, admin_db, write_document):
+  doc = write_document
+  published = queue(runtime_db, doc, 'txt')
+  assert worker.runOnce(workerDb)
+  # 模擬發布後，舊請求已取得先前 outgoing 鎖、尚未完成文件重驗的狀態。
+  with psycopg.connect(os.environ['DATABASE_ADMIN_URL']) as staleConnection:
+    staleConnection.execute('SELECT id FROM app_core.document_versions WHERE id=%s FOR UPDATE',
+      (doc['old'],))
+    runtime_db.execute("SET LOCAL lock_timeout = '1000ms'")
+    result = archive(runtime_db, doc, expected=published['version_id'])
+    runtime_db.commit()
+    assert result == {'document_id': doc['id'], 'status': 'archived'}
+  assert admin_db.execute('SELECT status,current_version_id FROM app_core.documents WHERE id=%s',
+    (doc['id'],)).fetchone() == ('archived', published['version_id'])
+  assert admin_db.execute('SELECT content FROM app_core.document_versions WHERE id=%s',
+    (doc['old'],)).fetchone() == ('old acceptance content',)

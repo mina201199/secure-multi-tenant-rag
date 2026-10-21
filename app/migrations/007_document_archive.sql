@@ -39,8 +39,10 @@ BEGIN
   END IF;
   IF document.status <> 'ready' THEN RAISE EXCEPTION 'not available' USING ERRCODE = 'P0002'; END IF;
 
+  -- 歷史版本可能仍被舊請求當作 outgoing 持鎖；只鎖本交易會取消的版本，避免反向等待。
   PERFORM 1 FROM app_core.document_versions
-    WHERE tenant_id = p_tenant AND document_id = p_document ORDER BY id FOR UPDATE;
+    WHERE tenant_id = p_tenant AND document_id = p_document
+      AND status IN ('queued', 'processing') ORDER BY id FOR UPDATE;
   PERFORM 1 FROM app_core.version_jobs
     WHERE tenant_id = p_tenant AND document_id = p_document ORDER BY id FOR UPDATE;
   UPDATE app_core.documents SET status = 'archived', archived_at = clock_timestamp(), archived_by = p_actor
