@@ -11,6 +11,7 @@
 ## 目錄
 
 - [目前進度與接手順序](#目前進度與接手順序)
+- [組員接手指南（2026-10-21）](#組員接手指南2026-10-21)
 - [目標與第一版範圍](#目標與第一版範圍)
 - [架構與資料流](#架構與資料流)
 - [技術框架與相依套件](#技術框架與相依套件)
@@ -52,6 +53,81 @@
 後續審查與準備見 [本輪成果及並行待辦](docs/next-parallel-work.md)：已完成獨立 AI PR／題庫複核、30 題人工審核表、獨立 PDF／TXT 原型及 RLS 實作計畫。人工簽核仍待完成；獨立原型保留實驗用途，正式受限 PDF 已另行接入 worker；RLS metadata audit 為 NOT_READY，不能視為 M3A 或 RLS 驗收通過。
 
 先前交付見 [五項並行工作驗證](docs/parallel-followup-results.md)：CI、安全 HTML 錯誤頁、新版寫入契約草案、授權盤點與解析品質樣本。當輪完整回歸為 112 項及 120 子測試；後續已接上 TXT 寫入及 worker，以本頁最新驗收為準。遠端 checks 與合併狀態直接見 [#73](https://github.com/mina201199/secure-multi-tenant-rag/pull/73)、[#74](https://github.com/mina201199/secure-multi-tenant-rag/pull/74)、[#75](https://github.com/mina201199/secure-multi-tenant-rag/pull/75)。
+
+## 組員接手指南（2026-10-21）
+
+### 先確認拿到哪一版
+
+目前已合併至 `main` 的功能到 PR #78（歷史後台）。**交接功能在 `codex/document-transfers`，由 [PR #79](https://github.com/mina201199/secure-multi-tenant-rag/pull/79) 提出，交接完成不代表 PR 已合併。** 本次交接程式提交為 `e5fbaa1`，文件更新為 `cabc79f`；該版本 [postgres／offline CI](https://github.com/mina201199/secure-multi-tenant-rag/actions/runs/39579503287) 已通過。後續提交與合併狀態以 PR 頁面為準。
+
+工作目錄沒有未提交變更時，可取得目前交接版本：
+
+```powershell
+git status --short
+git fetch origin
+git switch codex/document-transfers
+git pull --ff-only origin codex/document-transfers
+```
+
+若已有自己的修改，先提交或保存在自己的分支，再切換；不要用 reset 或強制覆蓋來同步。PR #79 合併前，要延續交接版本開發可從這個分支建立自己的功能分支，PR 明列相依 #79；合併後統一從更新後的 `main` 開始。組員各自用分支與 PR 協作，不直接共用寫入這個交接分支。
+
+### 接下來做什麼
+
+| 順序 | 工作與 Issue | 要交付／驗證的重點 |
+| --- | --- | --- |
+| 1 | 複核、合併 [PR #79](https://github.com/mina201199/secure-multi-tenant-rag/pull/79) | 核對最新提交的 CI 與交接測試；合併後才關閉 #21～#23，更新 #1 索引及相關 Issue。這次只推送，尚未合併。 |
+| 2 | [#24 帳號啟停](https://github.com/mina201199/secure-multi-tenant-rag/issues/24) | 管理員只能啟停本公司預建帳號，不能改公司／主管／角色、冒用或自動接管檔案；停用後 Session 與待審交接都須失效，恢復不新增 ACL。保留 migration 009 的帳號修訂機制。 |
+| 3 | [#25 RLS](https://github.com/mina201199/secure-multi-tenant-rag/issues/25)／[#26 隔離測試](https://github.com/mina201199/secure-multi-tenant-rag/issues/26) | 拆認證／業務連線與最低權限，整合一般閱讀、writer、processor、worker、歷史及交接能力；真實 PostgreSQL 驗證跨公司、撤權、停用、連線重用與背景工作。可先準備設計，正式驗收須包含新功能。 |
+| 4 | [#27 M2 整體驗收](https://github.com/mina201199/secure-multi-tenant-rag/issues/27) | 補帳號頁面、直接 API／DB 越權案例、第二階段教學及操作練習；個別功能完成不能當作整個 M2 完成。 |
+| 5 | #30～#37 來源與處理後續；回補 #19 | 來源下載、TXT 段落／PDF 跨頁定位、清洗、切塊、向量保存與多步 worker；未完成／封存內容不能進檢索。#19 仍待下載、檢索與舊引用入口整合（#30／#44／#51），不能先關閉。 |
+| 6 | M3B 付費模型、M3C 授權問答、M4 評估 | 先完成共用費用預留／結算與月上限 NT$300，再接真實付費呼叫；核心題庫先人工簽核，保留失敗與重測證據。 |
+
+RLS 的 [設計](docs/m2-rls-design.md) 與 [實作計畫](docs/rls-implementation-plan.md) 是較早期的規劃，部分「尚無歷史／交接／jobs」描述已過時。接手時必須對照 migrations 001～009 與目前 service 更新，不能直接照舊稿判定現況或啟用政策。
+
+### 在自己的電腦重現
+
+先依下方「環境與啟動方式」設定 `.env`；已存在的 `.env` 不要重新覆蓋，密碼不放進 Git。此次僅在隔離 `test-db` 驗證，**開發者日常 `db` 尚未由本次工作套用 migration 009**。要操作交接頁，需建置新映像並執行 setup：
+
+```powershell
+docker compose build setup
+docker compose up -d db
+docker compose run --rm setup
+docker compose up -d --no-deps web
+docker compose ps
+```
+
+確認 setup 顯示 `bootstrap 完成`、web 為 healthy，再開啟 `http://127.0.0.1:8008/login`。需要 TXT／PDF 自動處理時，先設定 `.env` 的專用 `WORKER_DB_PASSWORD` 並執行 setup，再執行 `docker compose --profile worker up -d --no-deps worker`；詳見 [worker 教學](docs/txt-worker.md)。已有重要開發資料先備份，不用 `docker compose down -v` 當一般更新步驟。
+
+使用虛構資料驗證：以 `a.owner` 到版本管理頁提出交接，接收人選 `a.staff`；換 `a.manager` 到 `/transfers`，應只看到有限待審資訊。核准後 `a.staff` 取得所選範圍的管理權，原擁有者失去該管理權，既有閱讀 ACL 不變。較完整步驟與限制見 [交接教學](docs/document-transfers.md)。
+
+```powershell
+# 專項驗證：41 項 DB + 25 項 HTTP = 66 項
+docker compose --profile test run --build --rm tests pytest -q -p no:cacheprovider --tb=short tests/test_transfer_db.py tests/test_transfers.py
+# 完整驗證：目前基準為 481 項與 120 個子測試
+docker compose --profile test run --rm tests pytest -q -p no:cacheprovider --tb=short
+# 在已備妥 Python 的環境執行，基準 12 項
+python -m unittest tools.test_check_rls_readiness tools.ci.test_run_tests -q
+```
+
+測試只用 Compose 的隔離 `test-db`，不要把測試 DSN 指向日常或正式資料庫。每次修改 app／tests 後要先重新 build 測試映像；只重跑舊映像不能驗證新程式。新增測試時沿用 `running_app` fixture，不要對共用 app 再進入一次 TestClient lifespan，否則會關閉其他測試使用的連線池。
+
+### 修改前一定要注意
+
+- **交接**：核准當下重驗主管、接收人、原擁有者、版本範圍、封存、期限與修訂；同一申請只能決策一次，所有移轉及稽核一起提交，失敗全部回滾。原擁有者停用後，即使恢復帳號，舊申請仍失效；不得手動歸零修訂欄位。
+- **閱讀與管理分開**：主管／管理員不自動取得正文或歷史權；主管待審清單不能出現檔案／版本 ID、檔名、摘要或正文。移轉不重建或清空一般／歷史 ACL，不移轉未選歷史版本，也不自動給新擁有者歷史調閱權。
+- **封存**：前台與歷史後台都拒絕；不能因重試、恢復、重新登入或交接而重新啟用。#19 尚有後續入口需要整合。
+- **交易與鎖**：延續 outgoing → document → selected history → users 的順序；歷史列 NOWAIT 衝突回 409。修改前先讀 migration 009 與 [歷史鎖說明](docs/history-access.md)，不要為了消除 409 任意改成反向等待。API／HTML 變更操作須 commit 成功才回成功。
+- **DB 角色與 migration**：已發布 migration 不回頭覆寫，後續新增 migration；web／worker 不持有 owner 憑證，不授予角色繞過驗權的直接寫入權。尚無 RLS，現有能力測試不能取代 RLS 驗收。
+- **功能範圍**：`/demo` 是記憶體互動展示，不代表正式端點完成。PDF 僅支援 [已驗收的保守格式](docs/pdf-processing.md)，沒有 OCR／任意版面解析；目前也沒有正式 RAG、向量檢索或付費模型流程。
+
+| 要改的功能 | 優先閱讀的實作與測試 |
+| --- | --- |
+| 交接／帳號停用與舊申請失效 | `app/migrations/009_document_transfers.sql`、`app/transfer_service.py`、`app/transfer_routes.py`；`tests/test_transfer_db.py`、`tests/test_transfers.py` |
+| 歷史／封存邊界 | migrations 007／008、`app/history_service.py`、`app/archive.py`；`tests/test_archive.py`、`tests/test_history.py` |
+| 上傳、發布與恢復 | migrations 004～006、`app/version_service.py`、`app/worker.py`；版本寫入、PDF 與 worker 測試 |
+| RLS／連線與登入 | `app/db.py`、`app/security.py`、`app/repository.py`、`app/bootstrap.py`；現行 migration／角色權限及 RLS 規劃文件 |
+
+每張後續 PR 請記錄：對應 Issue、變更範圍、migration／啟動方式、實際測試指令與結果、已知限制，以及失敗／修正／重測證據。更新 README 與相關教學後，再依驗收條件關閉 Issue。
 
 ## 目標與第一版範圍
 
