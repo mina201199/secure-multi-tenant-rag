@@ -1,0 +1,16 @@
+{% extends "base.html" %}
+{% block title %}封存文件{% endblock %}
+{% block content %}
+<a class="back-link" href="/documents/{{ document.id }}/versions">返回文件管理</a>
+<section class="paper">
+<h1>封存「{{ document.title }}」</h1>
+<p>封存後，所有人（包含擁有者）都無法從一般前台開啟這份文件。原始內容、歷史版本與分享紀錄會保留。</p>
+<p>排隊與處理中的工作會停止發布，不能重新啟用文件。目前不提供取消封存。</p>
+<form method="post" action="/documents/{{ document.id }}/archive">
+<input type="hidden" name="csrf_token" value="{{ me.csrf_token }}">
+<input type="hidden" name="expected_current_version_id" value="{{ document.current_version_id }}">
+<button class="button primary" type="submit">確認封存文件</button>
+<a class="button secondary" href="/documents">取消</a>
+</form>
+</section>
+{% endblock %}

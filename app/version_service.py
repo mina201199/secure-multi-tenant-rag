@@ -71,6 +71,11 @@ def recover_job(connection):
   return _call(connection, 'recover_version_job')
 
 
+def archive_document(connection, identity, document_id, expected_version_id):
+  return _call(connection, 'archive_document',
+    (identity['tenant_id'], identity['id'], document_id, expected_version_id))
+
+
 def complete_pdf_job(connection, job_id, lease_token, source_sha256, pages):
   return _call(connection, 'complete_pdf_version_job',
     (_uuid(job_id), _uuid(lease_token), source_sha256, Jsonb(pages)))
