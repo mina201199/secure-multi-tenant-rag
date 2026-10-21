@@ -60,3 +60,19 @@ python -m unittest tools.test_check_rls_readiness tools.ci.test_run_tests -q
 開發證據：先重現缺少 API 的 404 與缺少模板；並行測試及獨立複核發現稽核／ACL 外鍵的隱含歷史列鎖可能與舊 outgoing 互等，讀取／授權測試都曾因鎖逾時失敗。改為 NOWAIT 與 409 後，24 項專項測試通過；獨立再次複核無待修正問題。
 
 2026-10-21 最終本機驗收：重建 runtime／test 映像，完整回歸 **415 passed、120 subtests passed**；僅既有 Starlette HTTPX deprecation warning。readiness／CI runner 工具 **12 tests OK**，`git diff --check` 通過。遠端 CI 狀態以本 PR checks 為準。
+
+## PR #78 與 Issue 進度
+
+[PR #78](https://github.com/mina201199/secure-multi-tenant-rag/pull/78) 交付 #20 的獨立歷史 ACL、後台與成功調閱稽核。實作提交 `5b26682` 的 [postgres／offline CI](https://github.com/mina201199/secure-multi-tenant-rag/actions/runs/39562411896) 全數通過；最新提交與合併狀態以 PR checks 為準。
+
+同日合併前再次獨立複核，未發現待修正問題；完整重跑 **415 passed、120 subtests passed**，工具 **12 tests OK**。本輪追加的變更僅為 README 與本節的進度對照。
+
+| Issue | 驗收與剩餘範圍 |
+| --- | --- |
+| #20 / M2-06 | 歷史權與一般 ACL 分離、版本擁有者管理、每次重驗、成功調閱／授權／撤權稽核、封存全面拒絕已交付，可依本次驗收關閉 |
+| #19 / M2-05 | 新增「封存後歷史後台也拒絕」的整合驗證；下載、檢索與舊引用仍缺，維持開啟 |
+| #25 / M2-11 | 新增 history_readers／history_audit_events、tenant 複合外鍵及受限能力角色；RLS 政策與連線拆分仍未交付，維持開啟 |
+| #26 / M2-12 | 補歷史角色權限、稽核回滾與撤權／停用／封存／版本競態；不能取代實際 RLS 下的讀寫與連線重用驗收 |
+| #27 / M2-13 | 正式歷史 API、Jinja2 頁面、操作教學已交付；交接、帳號管理與整體第二階段驗收仍未完成 |
+
+#19 的下載／檢索前置仍未全部完成，但其封存核心已可支援本次歷史整合驗收；不因此把 #19 一併關閉。#20 關閉後，原 67 項任務為 17 項完成、50 項待完成，任務總索引 #1 同步維護。
