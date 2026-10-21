@@ -1,17 +1,9 @@
 {% extends "base.html" %}
-{% block title %}文件清單｜知識查詢平台{% endblock %}
+{% block title %}文件知識庫｜知序 Atlas{% endblock %}
 {% block content %}
-<h1>可閱讀的文件</h1>
-{% if documents %}
-<ul>
-  {% for document in documents %}
-  <li>
-    <a href="/documents/{{ document.id }}">{{ document.title }}</a>
-    <span class="muted">{{ document.category }}｜{{ "本公司可讀" if document.visibility == "company" else "指定人員" }}</span>
-  </li>
-  {% endfor %}
-</ul>
-{% else %}
-<p>目前沒有可閱讀的文件。</p>
-{% endif %}
+<div class="page-heading"><div><div class="eyebrow">KNOWLEDGE LIBRARY</div><h1>文件知識庫<span class="heading-dot">.</span></h1><p>把散落的資訊，整理成團隊可以信任的知識。</p></div><a class="button primary" href="/demo#upload">{{ icon('plus') }}體驗上傳文件</a></div>
+<section class="ask-banner"><div class="banner-symbol">{{ icon('sparkles') }}</div><div><span class="mini-label">讓知識，成為答案</span><h2>少一點翻找，多一點專注。</h2><p>從有權閱讀的文件出發，探索帶有來源的知識問答。</p></div><a class="button banner-button" href="/demo#ask">探索知識問答{{ icon('arrow') }}</a><div class="banner-art" aria-hidden="true"><div></div><div></div><div></div></div></section>
+<div class="section-heading"><h2>可閱讀的文件 <span class="count-pill">{{ documents|length }}</span></h2><span class="subtle">依你的目前權限顯示</span></div>
+<div class="library-panel"><div class="library-toolbar"><label class="search-field">{{ icon('search') }}<input type="search" id="live-search" placeholder="搜尋文件名稱、分類…" aria-label="搜尋文件"></label><span class="subtle">{{ icon('shield') }} 已驗證閱讀權限</span></div><div class="table-scroll"><table class="document-table"><thead><tr><th>文件名稱</th><th>分類</th><th>閱讀範圍</th><th>版本</th><th>狀態</th><th></th></tr></thead><tbody id="live-documents">{% for document in documents %}<tr data-search="{{ document.title }} {{ document.category }}"><td><a class="file-link" href="/documents/{{ document.id }}"><span class="file-icon {{ 'teal' if document.category == '料件清冊' else 'sand' }}">{{ icon('file') }}</span><span><strong>{{ document.title }}</strong><small>已授權的有效版本</small></span></a></td><td><span class="category-label">{{ document.category }}</span></td><td><span class="access-label">{{ icon('users' if document.visibility == 'company' else 'lock') }}{{ '本公司可讀' if document.visibility == 'company' else '指定人員' }}</span></td><td><span class="version-label">v{{ document.version_number }}</span></td><td><span class="status ready"><i></i>可閱讀</span></td><td><a href="/documents/{{ document.id }}" class="icon-button" aria-label="閱讀 {{ document.title }}">{{ icon('arrow') }}</a></td></tr>{% endfor %}</tbody></table></div><div id="live-empty" class="empty-state" {% if documents %}hidden{% endif %}>{{ icon('search') }}<h3>沒有符合條件的文件</h3><p>試試其他關鍵字，或向文件擁有者確認閱讀權限。</p></div><div class="table-footer"><span>共 {{ documents|length }} 份已授權文件</span><span>{{ icon('lock') }}只顯示你可以閱讀的內容</span></div></div>
+<div class="bottom-note">{{ icon('shield') }}<div><strong>每一份知識，都有恰當的閱讀範圍。</strong><p>公司公開、指定人員或私人文件，僅依目前有效版本的權限提供閱讀。</p></div><a href="/demo">查看完整產品展示{{ icon('arrow') }}</a></div>
 {% endblock %}

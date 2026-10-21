@@ -1,14 +1,5 @@
 {% extends "base.html" %}
-{% block title %}登入｜知識查詢平台{% endblock %}
-{% block content %}
-<h1>登入</h1>
-{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}
-<form method="post" action="/login">
-  {# 同一個值也放在 Cookie，伺服器比對兩者一致才接受，擋住別站偽造的登入表單 #}
-  <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
-  <label>帳號 <input name="username" autocomplete="username" maxlength="64" required></label>
-  <label>密碼 <input name="password" type="password" autocomplete="current-password" maxlength="256" required></label>
-  <button type="submit">登入</button>
-</form>
-<p class="muted">測試帳號見 README「測試帳號」段落。</p>
+{% block title %}登入｜知序 Atlas{% endblock %}
+{% block public_content %}
+<main class="login-layout"><section class="login-story"><a class="brand" href="/demo"><span class="brand-mark">{{ icon('layers') }}</span><strong>知序<span>atlas</span></strong></a><div class="login-story-main"><span class="mini-label">KNOWLEDGE, IN THE RIGHT HANDS.</span><h1>讓知識流動。<br>讓信任，有所依循。</h1><p>從一份文件，到一個有憑有據的答案。<br>專屬於你的團隊知識空間。</p><div class="login-illustration"><div class="illustration-file">{{ icon('file') }}<span>團隊知識</span><i></i><i></i><i></i></div><div class="illustration-shield">{{ icon('shield') }}</div><span class="illustration-caption">THE RIGHT KNOWLEDGE. THE RIGHT PEOPLE.</span></div></div><span class="login-copyright">知序 Atlas © 2026</span></section><section class="login-form-section"><div class="login-form-wrap"><span class="eyebrow">WELCOME TO YOUR WORKSPACE</span><h2>歡迎回來</h2><p class="login-description">登入你的公司知識空間，繼續探索。</p>{% if error %}<p class="error" role="alert">{{ error }}</p>{% endif %}<form method="post" action="/login"><input type="hidden" name="csrf_token" value="{{ csrf_token }}"><label class="form-label">帳號<input name="username" autocomplete="username" maxlength="64" placeholder="例如 a.reader" required></label><label class="form-label">密碼<input name="password" type="password" autocomplete="current-password" maxlength="256" placeholder="輸入你的密碼" required></label><button class="button primary full-width login-submit" type="submit">登入知識空間{{ icon('arrow') }}</button></form><div class="login-security">{{ icon('lock') }}每個帳號，對應專屬的公司與閱讀權限。</div><div class="login-demo"><span>想先看看完整產品？</span><a href="/demo">開啟互動展示{{ icon('arrow') }}</a></div><p class="login-hint">測試帳號見 README「測試帳號」；密碼使用本機設定。</p></div></section></main>
 {% endblock %}
