@@ -4,7 +4,7 @@
 
 **HTML 互動展示：[知序 Atlas](http://127.0.0.1:8008/demo)**。啟動 Compose 後即可開啟，不必登入。依本 README 的規劃展示文件庫、上傳處理、閱讀權限、新版、來源問答、交接、歷史、成員與預算；使用虛構記憶體資料，重新整理即還原，不代表後端已實作。真實登入與授權閱讀仍在 `/login`、`/documents`。展示範圍及驗證見 [介面說明](docs/ui-demo.md)。
 
-**更新日期：2026-10-20。已實作 M1、M2-01 版本模型及 M2-02 分享 / 撤權，尚待 PR 驗收。RLS 本輪交付設計，30 題核心題庫尚待人工審核；仍沒有 RLS 實作與 RAG。最新測試結果見下方整合紀錄。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
+**更新日期：2026-10-20。已實作 M1、M2-01 版本模型、M2-02 分享 / 撤權，以及 M2-03／04 的 TXT 新版排隊與受限內部發布切片，尚待 PR 驗收。尚無執行中的 worker、PDF 正式整合、RLS 與 RAG；30 題核心題庫仍待人工簽核。最新完整回歸為 210 項與 120 子測試通過，見 [TXT 版本驗收](docs/m2-version-acceptance.md)。** 本 README 是組員接手入口；完整業務決策與取捨見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)。決策稿記錄規劃當時的狀態，實作進度以本 README 與實際測試報告為準。
 
 **組員認領入口：[GitHub 任務總索引 #1](https://github.com/mina201199/secure-multi-tenant-rag/issues/1)**。67 項未完成編號任務已各自建立 Issue，依 7 個階段的 [Milestones](https://github.com/mina201199/secure-multi-tenant-rag/milestones) 與 `phase:*` 標籤分類。每項包含前置任務、完成條件與認領方式；請先看索引的起步建議，留言認領並由 Assignees 追蹤負責人。功能驗收後再關閉 Issue，並同步更新本文件勾選狀態。
 
@@ -36,7 +36,7 @@
 | `app/config.py` | `APP_ENV` 改為必填，非 local / test 強制 HTTPS | 部署時補正式環境設定 |
 | `app/db.py` | 改用 psycopg 連線池，一個 request 一個交易 | M2 加 RLS 時只用 `SET LOCAL` |
 | `app/security.py` | 已接上登入、登出、Session、CSRF、Origin / Referer 檢查與限流 | 審查並補充惡意案例 |
-| `app/repository.py` | 有效版本閱讀、版本擁有者分享與 ACL 原子替換已建立 | 新版建立 / 切換 API 與 RLS 尚未實作 |
+| `app/repository.py`、`app/version_service.py` | 有效版本閱讀、分享、TXT 新版排隊與受限內部發布已建立 | 接 worker／PDF 與 RLS；尚無公開發布端點 |
 | API / HTML 頁面 | 已有登入、文件清單 / 內容、分享 / 撤權與安全錯誤頁 | 補後續功能頁面 |
 | 初始化 / 測試帳號 | `app/bootstrap.py`、`app/migrations/`、兩家公司 seed 已建立 | 見「測試帳號」 |
 | 自動化測試 | 已加入分享、最低權限與題庫完整性測試；結果見 [整合紀錄](docs/parallel-integration.md) | 新功能同步補正反案例 |
@@ -45,7 +45,7 @@
 
 **第一個可以驗收的目標：兩家公司的預建帳號各自登入後，只能列出及開啟自己有權閱讀的文件；直接呼叫 API 或猜測 ID 也不能越權。**
 
-目前接手順序：驗收本分支 M2-01 / M2-02 → 新版建立與切換 → 封存、歷史、交接與 RLS。最後才接付費模型。M1、M2-01 及 M2-02 任務勾選與 Issue 關閉保留到 PR 驗收。
+目前接手順序：驗收 M2-01／02 與 TXT 版本切片 → worker、PDF 與恢復策略 → 封存、歷史、交接與 RLS。RLS 的 auth／business 連線拆分可並行準備，政策啟用前須整合新增寫入角色。最後才接付費模型。任務勾選與 Issue 關閉保留到 PR 驗收。
 
 本輪四條工作線已整合：分享 / 撤權 API 與頁面見 [M2-02 教學](docs/m2-sharing.md)；[RLS 設計](docs/m2-rls-design.md) 已記錄政策與未來驗收契約，但尚未啟用 RLS；[30 題核心題庫](evals/README.md) 使用獨立虛構來源，尚待人工審核與實際 RAG 評估。驗證結果與限制見 [整合紀錄](docs/parallel-integration.md)。
 
@@ -530,4 +530,4 @@ M3 驗收：PDF / TXT 到帶引用回答的完整流程可重現，失敗 / 重�
 - [ ] 四階段白話教學、練習、架構說明、展示腳本與面試問答。
 - [ ] 授權條款、相依授權檢查與可分享的作品集內容。
 
-本分支已接上 M2-01 版本模型與 M2-02 分享 / 撤權；下一項為 M2-03 / M2-04 新版建立與切換，並依 RLS 設計推進資料庫隔離。任務勾選與 Issue 關閉須待 PR 驗收。
+本分支已接上 M2-01、M2-02 與 [TXT 版本寫入切片](docs/m2-version-writes.md)。一般上傳只會排隊，尚未啟用背景處理；M2-03／04 完整驗收仍需 worker／PDF 整合，並依 RLS 設計推進資料庫隔離。任務勾選與 Issue 關閉須待 PR 驗收。
