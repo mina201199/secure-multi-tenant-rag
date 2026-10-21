@@ -4,7 +4,7 @@
 
 **HTML 互動展示：[知序 Atlas](http://127.0.0.1:8008/demo)**。啟動 Compose 後即可開啟，不必登入。依本 README 的規劃展示文件庫、上傳處理、閱讀權限、新版、來源問答、交接、歷史、成員與預算；使用虛構記憶體資料，重新整理即還原，不代表後端已實作。真實登入與授權閱讀仍在 `/login`、`/documents`。展示範圍及驗證見 [介面說明](docs/ui-demo.md)。
 
-**更新日期：2026-10-21。PR #70～#75 已驗收 M1、版本模型、分享／撤權與 TXT worker／恢復；PR #76 完成受限文字 PDF，#77 交付封存核心與工作取消，#78 完成獨立歷史後台。本分支接續完成 #21～#23 [檔案交接](docs/document-transfers.md)：主管核准重驗、原子移轉、ACL 保留與稽核；完整回歸 481 項與 120 子測試、工具 12 項通過。尚無 RLS 與 RAG，核心題庫仍待人工簽核。** 封存後即使有歷史權也一律拒絕調閱。先前驗收見 [歷史後台](docs/history-access.md)、[封存](docs/document-archive.md)、[PDF 處理](docs/pdf-processing.md) 與 [PR 整合](docs/pr-stack-acceptance-2026-10-21.md)。本 README 是組員接手入口；完整業務決策見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)，實作進度以本 README 與實測報告為準。
+**更新日期：2026-10-21。PR #70～#75 已驗收 M1、版本模型、分享／撤權與 TXT worker／恢復；PR #76 完成受限文字 PDF，#77 交付封存核心與工作取消，#78 完成獨立歷史後台。PR #79 已合併，完成 #21～#23 [檔案交接](docs/document-transfers.md)：主管核准重驗、原子移轉、ACL 保留與稽核；完整回歸 481 項與 120 子測試、工具 12 項通過。尚無 RLS 與 RAG，核心題庫仍待人工簽核。** 封存後即使有歷史權也一律拒絕調閱。先前驗收見 [歷史後台](docs/history-access.md)、[封存](docs/document-archive.md)、[PDF 處理](docs/pdf-processing.md) 與 [PR 整合](docs/pr-stack-acceptance-2026-10-21.md)。本 README 是組員接手入口；完整業務決策見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)，實作進度以本 README 與實測報告為準。
 
 **組員認領入口：[GitHub 任務總索引 #1](https://github.com/mina201199/secure-multi-tenant-rag/issues/1)**。原先 67 項待辦已各自建立 Issue，依 7 個階段的 [Milestones](https://github.com/mina201199/secure-multi-tenant-rag/milestones) 與 `phase:*` 標籤分類；目前完成狀態以 Issue 與下方清單為準。每項包含前置任務、完成條件與認領方式；請先看索引的起步建議，留言認領並由 Assignees 追蹤負責人。功能驗收後再關閉 Issue，並同步更新本文件勾選狀態。
 
@@ -46,7 +46,7 @@
 
 **已驗收的基礎：兩家公司的預建帳號各自登入後，只能列出及開啟自己有權閱讀的文件；直接呼叫 API 或猜測 ID 也不能越權。尚未啟用資料庫 RLS。**
 
-目前接手順序：[封存](docs/document-archive.md) 核心與 [#20 歷史後台](docs/history-access.md) 已交付，本分支完成 [#21～#23 交接](docs/document-transfers.md)，接著補 #24 帳號管理與 #25／#26 RLS；解析後續補來源下載、TXT 段落／跨頁定位與清洗切塊。RLS 的 auth／business 連線拆分可並行準備，政策啟用前須整合 writer／processor／worker／歷史與交接能力。最後才接付費模型。M1-01～11、M2-01～04、M2-06～09 與 M3A-02 已有各項驗收證據；這不表示完整 M2／M3A 已完成，#21～#23 待 PR 合併後關閉。先前範圍見 [PR #78 驗收](docs/history-access.md#pr-78-與-issue-進度)、[PR #77 驗收](docs/document-archive.md#pr-77-複核與-issue-進度) 與 [PR #76 驗收](docs/pdf-processing.md#pr-76-合併複核與-issue-進度)。
+目前接手順序：[封存](docs/document-archive.md) 核心與 [#20 歷史後台](docs/history-access.md) 已交付，PR #79 已交付 [#21～#23 交接](docs/document-transfers.md)，接著補 #24 帳號管理與 #25／#26 RLS；解析後續補來源下載、TXT 段落／跨頁定位與清洗切塊。RLS 的 auth／business 連線拆分可並行準備，政策啟用前須整合 writer／processor／worker／歷史與交接能力。最後才接付費模型。M1-01～11、M2-01～04、M2-06～09 與 M3A-02 已有各項驗收證據；這不表示完整 M2／M3A 已完成；#21～#23 已隨 PR #79 合併驗收關閉。先前範圍見 [PR #78 驗收](docs/history-access.md#pr-78-與-issue-進度)、[PR #77 驗收](docs/document-archive.md#pr-77-複核與-issue-進度) 與 [PR #76 驗收](docs/pdf-processing.md#pr-76-合併複核與-issue-進度)。
 
 本輪四條工作線已整合：分享 / 撤權 API 與頁面見 [M2-02 教學](docs/m2-sharing.md)；[RLS 設計](docs/m2-rls-design.md) 已記錄政策與未來驗收契約，但尚未啟用 RLS；[30 題核心題庫](evals/README.md) 使用獨立虛構來源，尚待人工審核與實際 RAG 評估。驗證結果與限制見 [整合紀錄](docs/parallel-integration.md)。
 
@@ -58,24 +58,24 @@
 
 ### 先確認拿到哪一版
 
-目前已合併至 `main` 的功能到 PR #78（歷史後台）。**交接功能在 `codex/document-transfers`，由 [PR #79](https://github.com/mina201199/secure-multi-tenant-rag/pull/79) 提出，交接完成不代表 PR 已合併。** 本次交接程式提交為 `e5fbaa1`，文件更新為 `cabc79f`；該版本 [postgres／offline CI](https://github.com/mina201199/secure-multi-tenant-rag/actions/runs/39579503287) 已通過。後續提交與合併狀態以 PR 頁面為準。
+**[PR #79](https://github.com/mina201199/secure-multi-tenant-rag/pull/79) 已合併至 `main`（`5358065`），#21～#23 已驗收關閉；組員從更新後的 `main` 接手。** 合併前重新獨立複核無待修問題，完整回歸再次通過 481 項與 120 個子測試，工具 12 項通過；合併前提交 `5f417f8` 的 [postgres／offline CI](https://github.com/mina201199/secure-multi-tenant-rag/actions/runs/39580595739) 全數成功。原 67 項任務現為 **20 項完成、47 項待完成**，不代表整個 M2 已完成。
 
 工作目錄沒有未提交變更時，可取得目前交接版本：
 
 ```powershell
 git status --short
 git fetch origin
-git switch codex/document-transfers
-git pull --ff-only origin codex/document-transfers
+git switch main
+git pull --ff-only origin main
 ```
 
-若已有自己的修改，先提交或保存在自己的分支，再切換；不要用 reset 或強制覆蓋來同步。PR #79 合併前，要延續交接版本開發可從這個分支建立自己的功能分支，PR 明列相依 #79；合併後統一從更新後的 `main` 開始。組員各自用分支與 PR 協作，不直接共用寫入這個交接分支。
+若已有自己的修改，先提交或保存在自己的分支，再切換；不要用 reset 或強制覆蓋來同步。後續功能從更新後的 `main` 建立自己的分支並提出 PR。若已從交接分支開始開發，先確認自己的分支已包含合併結果，再把 PR 的目標設為 `main`；不再把 #79 當成未完成依賴。
 
 ### 接下來做什麼
 
 | 順序 | 工作與 Issue | 要交付／驗證的重點 |
 | --- | --- | --- |
-| 1 | 複核、合併 [PR #79](https://github.com/mina201199/secure-multi-tenant-rag/pull/79) | 核對最新提交的 CI 與交接測試；合併後才關閉 #21～#23，更新 #1 索引及相關 Issue。這次只推送，尚未合併。 |
+| 完成 | [PR #79 交接驗收](https://github.com/mina201199/secure-multi-tenant-rag/pull/79) | 已複核、合併並關閉 #21～#23；接手先同步 main，再從 #24 開始。詳見 [合併驗收與 Issue 進度](docs/document-transfers.md#pr-79-合併驗收與-issue-進度)。 |
 | 2 | [#24 帳號啟停](https://github.com/mina201199/secure-multi-tenant-rag/issues/24) | 管理員只能啟停本公司預建帳號，不能改公司／主管／角色、冒用或自動接管檔案；停用後 Session 與待審交接都須失效，恢復不新增 ACL。保留 migration 009 的帳號修訂機制。 |
 | 3 | [#25 RLS](https://github.com/mina201199/secure-multi-tenant-rag/issues/25)／[#26 隔離測試](https://github.com/mina201199/secure-multi-tenant-rag/issues/26) | 拆認證／業務連線與最低權限，整合一般閱讀、writer、processor、worker、歷史及交接能力；真實 PostgreSQL 驗證跨公司、撤權、停用、連線重用與背景工作。可先準備設計，正式驗收須包含新功能。 |
 | 4 | [#27 M2 整體驗收](https://github.com/mina201199/secure-multi-tenant-rag/issues/27) | 補帳號頁面、直接 API／DB 越權案例、第二階段教學及操作練習；個別功能完成不能當作整個 M2 完成。 |
@@ -611,4 +611,4 @@ M3 驗收：PDF / TXT 到帶引用回答的完整流程可重現，失敗 / 重�
 - [ ] 四階段白話教學、練習、架構說明、展示腳本與面試問答。
 - [ ] 授權條款、相依授權檢查與可分享的作品集內容。
 
-已交付 M1、版本、分享、[TXT 寫入](docs/m2-version-writes.md)、[worker／恢復](docs/txt-worker.md)、[PDF 處理](docs/pdf-processing.md)、[封存核心](docs/document-archive.md) 與 [歷史後台](docs/history-access.md)。本分支新增 [交接提出／主管審核與原子移轉](docs/document-transfers.md)，#21～#23 待 PR 合併後關閉。帳號管理、RLS 與下載／檢索的封存整合仍待後續；先前整合證據見 [PR #70～#75 驗收](docs/pr-stack-acceptance-2026-10-21.md)。
+已交付 M1、版本、分享、[TXT 寫入](docs/m2-version-writes.md)、[worker／恢復](docs/txt-worker.md)、[PDF 處理](docs/pdf-processing.md)、[封存核心](docs/document-archive.md) 與 [歷史後台](docs/history-access.md)。PR #79 已交付 [交接提出／主管審核與原子移轉](docs/document-transfers.md)，#21～#23 已驗收關閉。帳號管理、RLS 與下載／檢索的封存整合仍待後續；先前整合證據見 [PR #70～#75 驗收](docs/pr-stack-acceptance-2026-10-21.md)。

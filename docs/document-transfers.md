@@ -61,3 +61,15 @@ python -m unittest tools.test_check_rls_readiness tools.ci.test_run_tests -q
 | #27 | 交接 API／頁面／教學已加入；帳號管理與完整 M2 驗收仍待後續 |
 
 RLS 尚未啟用；runtime 仍有既有版本／使用者 SELECT 信任邊界。申請原因由使用者自行填寫，不做內容分類。無撤回／通知、跨檔案批次、主管自收或例外轉移流程；失效 pending 記錄保留作為提出人的紀錄，不由背景工作自動批准。
+
+## PR #79 合併驗收與 Issue 進度
+
+2026-10-21 [PR #79](https://github.com/mina201199/secure-multi-tenant-rag/pull/79) 已合併至 main（`5358065`）。合併前再次獨立複核無待修問題；完整回歸 **481 passed、120 subtests passed（50.02 秒）**、工具 **12 tests OK**、git diff --check 通過。提交 `5f417f8` 的 [postgres／offline CI](https://github.com/mina201199/secure-multi-tenant-rag/actions/runs/39580595739) 全數成功。合併結果與受測內容一致，這次後續更新只有 README 與本驗收文件。
+
+- #21、#22、#23 的完成條件均已驗收，合併後關閉；#1 索引累計原 67 項任務為 **20 項完成、47 項待完成**。
+- #24 仍待正式帳號管理 API／頁面；已提供帳號修訂與停用／恢復失效交接的整合基礎，不能當作 #24 已完成。
+- #25／#26 仍待 RLS、連線拆分與完整隔離驗收；本次交付是受限能力、複合關聯及交易測試。
+- #27 已加入交接 API／頁面與教學，仍缺帳號管理及整體 M2 驗收。
+- #19 交接不能重新啟用封存檔案的整合已驗證，但下載／檢索／舊引用入口仍待後續完成。
+
+組員改從更新後的 main 接手；不需繼續以交接分支為基底。日常資料庫仍須依部署步驟自行套用 migration 009，GitHub 合併不會自動更新本機服務。
