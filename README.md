@@ -2,7 +2,11 @@
 
 提供多家公司共用、依公司與文件權限隔離的繁體中文知識查詢平台。處理作業規定、技令手冊、料件清冊等知識資料，完成盤點、解析、清洗、切塊、向量化、檢索及帶來源引用的回答，並用實驗與安全測試驗證結果。
 
-**HTML 互動展示：[知序 Atlas](http://127.0.0.1:8008/demo)**。啟動 Compose 後即可開啟，不必登入。依本 README 的規劃展示文件庫、上傳處理、閱讀權限、新版、來源問答、交接、歷史、成員與預算；使用虛構記憶體資料，重新整理即還原，不代表後端已實作。真實登入與授權閱讀仍在 `/login`、`/documents`。展示範圍及驗證見 [介面說明](docs/ui-demo.md)。
+**公開互動 Demo：[開啟企業知識庫展示](https://secure-rag-interview-demo.ruru0109lee.chatgpt.site)**。面試官無需登入，開發電腦關機也能體驗。可切換公司與角色、查詢虛構範例、查看來源，並操作撤權與版本更新情境。這是獨立靜態展示，不呼叫付費 AI，不代表本分支的後端已部署或已完成 RAG。
+
+**面試與架構導覽：**[完整 README、介紹稿與常見問答](https://github.com/mina201199/secure-multi-tenant-rag/blob/codex/milestones-1-3-handoff/README.md) · [架構與系統設計圖](https://github.com/mina201199/secure-multi-tenant-rag/blob/codex/milestones-1-3-handoff/README.md#架構與資料流) · [公開 Demo 驗證紀錄](https://github.com/mina201199/secure-multi-tenant-rag/blob/codex/milestones-1-3-handoff/docs/public-demo-verification.md)。這些文件描述 `codex/milestones-1-3-handoff` 的實作與驗收；該分支的 RLS／RAG 尚未整合進 `main`，本分支實際進度仍以下方紀錄為準。GitHub 內容仍依儲存庫存取權限開放，公開 Demo 可獨立使用。
+
+**本機 HTML 互動展示：[知序 Atlas](http://127.0.0.1:8008/demo)**。啟動 Compose 後即可開啟，不必登入。依本 README 的規劃展示文件庫、上傳處理、閱讀權限、新版、來源問答、交接、歷史、成員與預算；使用虛構記憶體資料，重新整理即還原，不代表後端已實作。真實登入與授權閱讀仍在 `/login`、`/documents`。展示範圍及驗證見 [介面說明](docs/ui-demo.md)。
 
 **更新日期：2026-10-21。PR #70～#75 已驗收 M1、版本模型、分享／撤權與 TXT worker／恢復；PR #76 完成受限文字 PDF，#77 交付封存核心與工作取消，#78 完成獨立歷史後台。PR #79 已合併，完成 #21～#23 [檔案交接](docs/document-transfers.md)：主管核准重驗、原子移轉、ACL 保留與稽核；完整回歸 481 項與 120 子測試、工具 12 項通過。尚無 RLS 與 RAG，核心題庫仍待人工簽核。** 封存後即使有歷史權也一律拒絕調閱。先前驗收見 [歷史後台](docs/history-access.md)、[封存](docs/document-archive.md)、[PDF 處理](docs/pdf-processing.md) 與 [PR 整合](docs/pr-stack-acceptance-2026-10-21.md)。本 README 是組員接手入口；完整業務決策見 [專案決策稿](docs/secure-multi-tenant-rag-decision-draft.md)，實作進度以本 README 與實測報告為準。
 
