@@ -13,3 +13,6 @@ reports/*.json
 *.key
 *.p12
 *.pfx
+
+# Sites manages this demo as an independent, cloud-backed source repository.
+/sites/secure-rag-demo/
