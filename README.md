@@ -1,6 +1,15 @@
 # Secure Multi-Tenant RAG
 
-提供多家公司共用、依公司與文件權限隔離的繁體中文知識查詢平台。處理作業規定、技令手冊、料件清冊等知識資料，完成盤點、解析、清洗、切塊、向量化、檢索及帶來源引用的回答，並用實驗與安全測試驗證結果。
+> **現況（2026-10-30）：`main` 是多租戶文件權限平台，還沒有 AI 功能與資料庫 RLS；RAG 與 RLS 在未合併的分支。**
+>
+> - **`main` 已有**：Argon2 密碼雜湊、Session、CSRF 與 Origin／Referer 檢查（`app/security.py`）；含 tenant 的複合外鍵（`app/migrations/001_m1_core.sql`）；文件版本、分享／撤權、封存、歷史調閱與交接；TXT／受限文字 PDF worker（`app/worker.py`、`app/pdf_parser.py`）；CI、Dockerfile，以及在真實 PostgreSQL 上執行的測試。隔離目前靠 API 層 SQL 條件與複合外鍵。
+> - **RAG 與 RLS 位於 [`codex/milestones-1-3-handoff`](https://github.com/mina201199/secure-multi-tenant-rag/tree/codex/milestones-1-3-handoff) 分支，尚未合併進 `main`**：
+>   - `app/models.py`：OpenAI `text-embedding-3-small` 建向量，Responses API 以 strict JSON schema 讓模型只回傳證據來源與引句。
+>   - `app/rag.py`：pgvector 精確 cosine 搜尋，最多 Top-5；引句必須是來源段落的連續子字串；送模型前與模型回傳後都重新驗權。
+>   - `app/policies.sql`：以 HMAC 簽章綁定 session context，敏感資料表啟用 `FORCE ROW LEVEL SECURITY`；對應測試在 `tests/test_rls.py`。
+> - **兩條分支都還沒做**：Hybrid／BM25 檢索與 Reranker；評估 runner 與 Recall／MRR 等檢索指標，因此沒有任何實測品質分數；`evals/core_questions.json` 的 30 題由 AI 撰寫，人工簽核欄位仍空白。
+
+專案目標是提供多家公司共用、依公司與文件權限隔離的繁體中文知識查詢平台：處理作業規定、技令手冊、料件清冊等知識資料，完成盤點、解析、清洗、切塊、向量化、檢索及帶來源引用的回答，並用實驗與安全測試驗證結果。以上是目標，不是目前完成範圍；實際進度見上方現況與「目前進度與接手順序」。
 
 **公開互動 Demo：[開啟企業知識庫展示](https://secure-rag-interview-demo.ruru0109lee.chatgpt.site)**。面試官無需登入，開發電腦關機也能體驗。可切換公司與角色、查詢虛構範例、查看來源，並操作撤權與版本更新情境。這是獨立靜態展示，不呼叫付費 AI，不代表本分支的後端已部署或已完成 RAG。
 
